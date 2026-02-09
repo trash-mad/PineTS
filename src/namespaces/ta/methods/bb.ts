@@ -97,6 +97,6 @@ export function bb(context: any) {
         const lower = middle - mult * stdev;
 
         // Return as tuple with double brackets
-        return [[context.precision(upper), context.precision(middle), context.precision(lower)]];
+        return [[context.precision(middle), context.precision(upper), context.precision(lower)]];
     };
 }
