@@ -6,7 +6,8 @@ import { PineArray } from './namespaces/array/array.index';
 import { PineMap } from './namespaces/map/map.index';
 import { PineMatrix } from './namespaces/matrix/matrix.index';
 import { Barstate } from './namespaces/Barstate';
-import { Core, NAHelper, TimeHelper } from './namespaces/Core';
+import { Core, NAHelper } from './namespaces/Core';
+import { TimeHelper, TimeComponentHelper, EXTRACTORS, getDatePartsInTimezone } from './namespaces/Time';
 import { Input } from './namespaces/input/input.index';
 import PineMath from './namespaces/math/math.index';
 import { PineRequest } from './namespaces/request/request.index';
@@ -138,6 +139,14 @@ export class Context {
             timestamp: core.timestamp.bind(core),
             time: new TimeHelper(this, 'openTime'),
             time_close: new TimeHelper(this, 'closeTime'),
+            dayofmonth: new TimeComponentHelper(this, EXTRACTORS.dayofmonth),
+            dayofweek: new TimeComponentHelper(this, EXTRACTORS.dayofweek),
+            hour: new TimeComponentHelper(this, EXTRACTORS.hour),
+            minute: new TimeComponentHelper(this, EXTRACTORS.minute),
+            month: new TimeComponentHelper(this, EXTRACTORS.month),
+            second: new TimeComponentHelper(this, EXTRACTORS.second),
+            weekofyear: new TimeComponentHelper(this, EXTRACTORS.weekofyear),
+            year: new TimeComponentHelper(this, EXTRACTORS.year),
             //types
             bool: core.bool.bind(core),
         };
@@ -170,6 +179,15 @@ export class Context {
             get timenow() {
                 return new Date().getTime();
             },
+            get time_tradingday() {
+                //FIXME : this is a temporary solution to get the time_tradingday value,
+                //we need to implement a better way to handle realtime states based on provider's data when available
+                const currentTime = Series.from(_this.data.openTime).get(0);
+                if (isNaN(currentTime)) return NaN;
+                const timezone = _this.pine?.syminfo?.timezone || 'UTC';
+                const parts = getDatePartsInTimezone(currentTime, timezone);
+                return Date.UTC(parts.year, parts.month - 1, parts.day, 0, 0, 0);
+            },
             get inputs() {
                 return _this.inputs;
             },
@@ -178,6 +196,13 @@ export class Context {
             ...coreFunctions,
             ...types,
         };
+
+        // Merge dayofweek enum constants onto the dual-use TimeComponentHelper.
+        // The ...types spread above overwrites coreFunctions.dayofweek with the enum,
+        // so we restore the TimeComponentHelper and attach the enum constants to it.
+        const dowComponent = coreFunctions.dayofweek as any;
+        Object.assign(dowComponent, { sunday: 1, monday: 2, tuesday: 3, wednesday: 4, thursday: 5, friday: 6, saturday: 7 });
+        this.pine.dayofweek = dowComponent;
 
         const plotHelper = new PlotHelper(this);
         const hlineHelper = new HlineHelper(this);
