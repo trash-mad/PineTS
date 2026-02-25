@@ -21,7 +21,7 @@ With PineTS, you can create, test and visualize technical indicators using moder
 This is a BTCUSDT chart with the Williams Vix Fix indicator applied.
 The chart data and indicator are generated using PineTS, showcasing the capabilities of the library in creating interactive and dynamic charts.
 
-The visualization is done using the [Lightweight Charts](https://tradingview.github.io/lightweight-charts/) library.
+The visualization is done using the [QFChart](https://github.com/QuantForgeOrg/QFChart) library.
 
 <div id="container">
     <p>

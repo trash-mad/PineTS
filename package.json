@@ -74,7 +74,7 @@
         "knip": "knip"
     },
     "author": "Alaa-eddine KADDOURI",
-    "license": "AGPL-3.0",
+    "license": "AGPL-3.0-only",
     "dependencies": {
         "acorn": "^8.14.0",
         "acorn-walk": "^8.3.4",
