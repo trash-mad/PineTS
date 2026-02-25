@@ -4,6 +4,24 @@ import { Series } from '../Series';
 import { PineTypeObject } from './PineTypeObject';
 import { parseArgsForPineParams } from './utils';
 
+//prettier-ignore
+const TIMESTAMP_SIGNATURES = [
+    // timestamp(dateString)
+    ['dateString'],
+    // timestamp(year, month, day, hour, minute, second)
+    ['year', 'month', 'day', 'hour', 'minute', 'second'],
+    // timestamp(timezone, year, month, day, hour, minute, second)
+    ['timezone', 'year', 'month', 'day', 'hour', 'minute', 'second'],
+];
+
+//prettier-ignore
+const TIMESTAMP_ARGS_TYPES = {
+    dateString: 'string',
+    timezone: 'string',
+    year: 'number', month: 'number', day: 'number',
+    hour: 'number', minute: 'number', second: 'number',
+};
+
 const INDICATOR_SIGNATURE = [
     'title',
     'shorttitle',
@@ -66,6 +84,26 @@ const COLOR_CONSTANTS = {
 export function parseIndicatorOptions(args: any[]): Partial<IndicatorOptions> {
     return parseArgsForPineParams<Partial<IndicatorOptions>>(args, INDICATOR_SIGNATURE, INDICATOR_ARGS_TYPES);
 }
+
+/**
+ * NAHelper implements the dual-use `na` identifier.
+ * - Bare `na` → `na.__value` → NaN
+ * - `na(x)` → `na.any(x)` → checks if x is NaN
+ */
+export class NAHelper {
+    get __value() {
+        return NaN;
+    }
+
+    param(source: any, index: number = 0) {
+        return Series.from(source).get(index);
+    }
+
+    any(series: any) {
+        return isNaN(Series.from(series).get(0));
+    }
+}
+
 export class Core {
     public color = {
         param: (source, index = 0) => {
@@ -176,6 +214,133 @@ export class Core {
     alertcondition(condition, title, message) {
         //console.warn('alertcondition called but is currently not implemented', condition, title, message);
     }
+
+    /**
+     * Converts date/time components to a UNIX timestamp in milliseconds.
+     * Supports multiple signatures:
+     *   timestamp(dateString)                                     — RFC 2822 / ISO 8601 string
+     *   timestamp(year, month, day, hour?, minute?, second?)      — components, exchange timezone
+     *   timestamp(timezone, year, month, day, hour?, minute?, second?) — components, explicit timezone
+     */
+    timestamp(...args: any[]) {
+        // Unwrap Series values before passing to the signature parser
+        const unwrapped = args.map((a) => (a instanceof Series ? a.get(0) : a));
+        const parsed = parseArgsForPineParams<any>(unwrapped, TIMESTAMP_SIGNATURES, TIMESTAMP_ARGS_TYPES);
+
+        // Overloads 2-5: component-based (check year first — timezone overload also matches dateString)
+        if (parsed.year !== undefined) {
+            const year = parsed.year;
+            const month = parsed.month;
+            const day = parsed.day;
+            const hour = parsed.hour || 0;
+            const minute = parsed.minute || 0;
+            const second = parsed.second || 0;
+            const timezone = parsed.timezone || this.context.pine?.syminfo?.timezone || 'UTC';
+            return this._timestampFromComponents(timezone, year, month, day, hour, minute, second);
+        }
+
+        // Overload 1: timestamp(dateString)
+        if (parsed.dateString !== undefined) {
+            return new Date(parsed.dateString).getTime();
+        }
+
+        return NaN;
+    }
+
+    /**
+     * Build a UNIX timestamp (ms) from calendar components interpreted in a given timezone.
+     * Supports IANA timezone names ("America/New_York") and UTC offset strings ("UTC+5", "GMT-03:30").
+     */
+    private _timestampFromComponents(
+        timezone: string,
+        year: number,
+        month: number,
+        day: number,
+        hour: number,
+        minute: number,
+        second: number,
+    ): number {
+        // Pine Script months are 1-based, JS Date months are 0-based
+        // Pine Script allows out-of-range values (they roll over), and so does JS Date
+        const utcDate = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+        // Fix 2-digit years: new Date(Date.UTC(20, ...)) gives 1920, not 0020
+        if (year >= 0 && year < 100) utcDate.setUTCFullYear(year);
+
+        // For plain UTC, return directly
+        const tzNorm = timezone.trim();
+        if (tzNorm === 'UTC' || tzNorm === 'GMT') {
+            return utcDate.getTime();
+        }
+
+        // Try parsing as UTC/GMT offset: "UTC+5", "UTC-03:30", "GMT+5:30"
+        const offsetMatch = tzNorm.match(/^(?:UTC|GMT)([+-])(\d{1,2})(?::(\d{2}))?$/i);
+        if (offsetMatch) {
+            const sign = offsetMatch[1] === '+' ? 1 : -1;
+            const offsetHours = parseInt(offsetMatch[2], 10);
+            const offsetMinutes = parseInt(offsetMatch[3] || '0', 10);
+            const totalOffsetMs = sign * (offsetHours * 60 + offsetMinutes) * 60 * 1000;
+            // The user's components are in the given offset, so subtract to get UTC
+            return utcDate.getTime() - totalOffsetMs;
+        }
+
+        // IANA timezone name — use Intl to compute the offset
+        try {
+            return this._timestampFromIANA(timezone, year, month, day, hour, minute, second);
+        } catch {
+            // Fallback to UTC if timezone is unrecognized
+            return utcDate.getTime();
+        }
+    }
+
+    /**
+     * Convert calendar components in an IANA timezone to a UTC timestamp.
+     * Uses Intl.DateTimeFormat to determine the timezone offset.
+     */
+    private _timestampFromIANA(
+        timezone: string,
+        year: number,
+        month: number,
+        day: number,
+        hour: number,
+        minute: number,
+        second: number,
+    ): number {
+        // Build a rough UTC estimate, then use Intl to find the actual offset
+        const utcEstimate = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+        if (year >= 0 && year < 100) utcEstimate.setUTCFullYear(year);
+
+        // Format the estimate in the target timezone to extract its parts
+        const formatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: timezone,
+            year: 'numeric',
+            month: 'numeric',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: 'numeric',
+            second: 'numeric',
+            hour12: false,
+        });
+
+        const parts = formatter.formatToParts(utcEstimate);
+        const get = (type: string) => parseInt(parts.find((p) => p.type === type)?.value || '0', 10);
+
+        const tzYear = get('year');
+        const tzMonth = get('month');
+        const tzDay = get('day');
+        let tzHour = get('hour');
+        if (tzHour === 24) tzHour = 0; // Intl may return 24 for midnight
+        const tzMinute = get('minute');
+        const tzSecond = get('second');
+
+        // Offset = what Intl says the time is minus what UTC says
+        const tzDate = new Date(Date.UTC(tzYear, tzMonth - 1, tzDay, tzHour, tzMinute, tzSecond));
+        if (tzYear >= 0 && tzYear < 100) tzDate.setUTCFullYear(tzYear);
+        const offsetMs = tzDate.getTime() - utcEstimate.getTime();
+
+        // The user's components are local to the timezone, so subtract the offset
+        return utcEstimate.getTime() - offsetMs;
+    }
+
     //types
     bool(series: any) {
         const val = Series.from(series).get(0);

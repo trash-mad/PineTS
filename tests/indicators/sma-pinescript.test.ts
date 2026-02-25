@@ -1,0 +1,78 @@
+import { PineTS } from 'index';
+import { describe, expect, it } from 'vitest';
+
+import { Provider } from '@pinets/marketData/Provider.class';
+
+describe('Indicators', () => {
+    it('SMA Pine Script source', async () => {
+        const pineTS = new PineTS(Provider.Mock, 'BTCUSDC', 'W', null, new Date('2019-06-18').getTime(), new Date('2020-01-27').getTime());
+
+        const code = `
+//@version=5
+indicator("Log Test")
+
+// Date range and signature are mandatory, they should always be present
+__startDate = timestamp("2019-06-19 00:00")
+__endDate   = timestamp("2019-09-01 00:00")
+// The signature allows us to perform an extra verification that the obtained logs are from this script
+__signature = 'sma001'
+
+// ---------------------------------------------------------------------------
+// ta.sma — comprehensive syntax and input variant coverage
+//
+// Variants tested:
+//   [1]  close, length=5          — baseline: standard source, short window
+//   [2]  close, length=14         — baseline: standard source, medium window
+//   [3]  open, length=5           — alternative built-in source series
+//   [4]  high, length=5           — alternative built-in source series
+//   [5]  low, length=5            — alternative built-in source series
+//   [6]  hl2, length=5            — composite built-in: (high+low)/2
+//   [7]  hlc3, length=5           — composite built-in: (high+low+close)/3
+//   [8]  ohlc4, length=5          — composite built-in: (open+high+low+close)/4
+//   [9]  close-open, length=5     — arithmetic expression as source (candle body)
+//   [10] high-low, length=5       — arithmetic expression as source (candle range)
+//   [11] math.abs(close-open), 5  — function call expression as source
+//   [12] volume, length=5         — non-price series as source
+//   [13] ta.sma(close,5), length=3 — nested: SMA of SMA (double smoothing)
+// ---------------------------------------------------------------------------
+
+_sma_close5    = ta.sma(close, 5)
+_sma_close14   = ta.sma(close, 14)
+_sma_open      = ta.sma(open, 5)
+_sma_high      = ta.sma(high, 5)
+_sma_low       = ta.sma(low, 5)
+_sma_hl2       = ta.sma(hl2, 5)
+_sma_hlc3      = ta.sma(hlc3, 5)
+_sma_ohlc4     = ta.sma(ohlc4, 5)
+_sma_body      = ta.sma(close - open, 5)
+_sma_range     = ta.sma(high - low, 5)
+_sma_absbody   = ta.sma(math.abs(close - open), 5)
+_sma_volume    = ta.sma(volume, 5)
+_sma_of_sma    = ta.sma(ta.sma(close, 5), 3)
+
+// Only capture logs within the specified date range
+if not barstate.islast and time >= __startDate and time <= __endDate
+    log.info(
+         '{0} {1} {2} {3} {4} {5} {6} {7} {8} {9} {10} {11} {12} {13}',
+         __signature,
+         _sma_close5,
+         _sma_close14,
+         _sma_open,
+         _sma_high,
+         _sma_low,
+         _sma_hl2,
+         _sma_hlc3,
+         _sma_ohlc4,
+         _sma_body,
+         _sma_range,
+         _sma_absbody,
+         _sma_volume,
+         _sma_of_sma)
+
+`;
+        const context = await pineTS.run(code);
+
+        //console.log(context.plots);
+        expect(context.plots).toBeDefined();
+    });
+});

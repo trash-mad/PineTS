@@ -39,10 +39,12 @@ describe('Transpiler', () => {
   const ta = $.ta;
   const math = $.math;
   const p0 = $.param(open, undefined, 'p0');
-  $.let.glb1_lowest_signaled_price = $.init($.let.glb1_lowest_signaled_price, nz(p0, NaN));
-  $.let.glb1_n_a = $.init($.let.glb1_n_a, NaN);
-  const p1 = $.param($.let.glb1_n_a, undefined, 'p1');
-  if (na(p1)) {
+  const p1 = $.param(na.__value, undefined, 'p1');
+  $.let.glb1_lowest_signaled_price = $.init($.let.glb1_lowest_signaled_price, nz(p0, p1));
+  $.let.glb1_n_a = $.init($.let.glb1_n_a, na.__value);
+  const p2 = na.param($.let.glb1_n_a, undefined, 'p2');
+  const temp_1 = na.any(p2);
+  if (temp_1) {
     $.set($.let.glb1_n_a, $.get(close, 0));
   }
 }`;
@@ -91,10 +93,12 @@ describe('Transpiler', () => {
   const ta = $.ta;
   const math = $.math;
   const p0 = $.param(open, undefined, 'p0');
-  $.let.glb1_lowest_signaled_price = $.init($.let.glb1_lowest_signaled_price, nz(p0, NaN));
-  $.let.glb1_n_a = $.init($.let.glb1_n_a, NaN);
-  const p1 = $.param($.let.glb1_n_a, undefined, 'p1');
-  if (na(p1)) {
+  const p1 = $.param(na.__value, undefined, 'p1');
+  $.let.glb1_lowest_signaled_price = $.init($.let.glb1_lowest_signaled_price, nz(p0, p1));
+  $.let.glb1_n_a = $.init($.let.glb1_n_a, na.__value);
+  const p2 = na.param($.let.glb1_n_a, undefined, 'p2');
+  const temp_1 = na.any(p2);
+  if (temp_1) {
     $.set($.let.glb1_n_a, $.get(close, 0));
   }
   return {
@@ -140,10 +144,12 @@ if (na(n_a)) {
   const ta = $.ta;
   const math = $.math;
   const p0 = $.param(open, undefined, 'p0');
-  $.let.glb1_lowest_signaled_price = $.init($.let.glb1_lowest_signaled_price, nz(p0, NaN));
-  $.let.glb1_n_a = $.init($.let.glb1_n_a, NaN);
-  const p1 = $.param($.let.glb1_n_a, undefined, 'p1');
-  if (na(p1)) {
+  const p1 = $.param(na.__value, undefined, 'p1');
+  $.let.glb1_lowest_signaled_price = $.init($.let.glb1_lowest_signaled_price, nz(p0, p1));
+  $.let.glb1_n_a = $.init($.let.glb1_n_a, na.__value);
+  const p2 = na.param($.let.glb1_n_a, undefined, 'p2');
+  const temp_1 = na.any(p2);
+  if (temp_1) {
     $.set($.let.glb1_n_a, $.get(close, 0));
   }
 }`;
@@ -294,7 +300,7 @@ let src_open = input.any({ title: 'Open Source', defval: open });
   const p1 = ta.param(14, undefined, 'p1');
   const temp_1 = ta.sma(p0, p1, "_ta0");
   $.const.glb1_sma = $.init($.const.glb1_sma, temp_1);
-  if ($.pine.math.__eq($.get(low, 0), NaN)) {
+  if ($.pine.math.__eq($.get(low, 0), $.get(na.__value, 0))) {
     $.const.if2_data3 = $.init($.const.if2_data3, $.get(high, 0));
   }
 }`;
@@ -461,7 +467,7 @@ let src_open = input.any({ title: 'Open Source', defval: open });
   const p1 = ta.param($.let.glb1_highUsePivot, undefined, 'p1');
   const temp_1 = ta.change(p1, "_ta0");
   const p2 = $.param(temp_1, undefined, 'p2');
-  const p3 = plot.param(bool(p2) ? NaN : "#FF0000", undefined, 'p3');
+  const p3 = plot.param(bool(p2) ? $.get(na.__value, 0) : "#FF0000", undefined, 'p3');
   const p4 = plot.param({
     color: p3
   }, undefined, 'p4');

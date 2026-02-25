@@ -1,5 +1,18 @@
 # Change Log
 
+## [0.8.11] - 2026-02-21 - Time Functions & Log Timezone
+
+### Added
+
+- **Time Functions**: Added support for `time`, `time_close`, and `timestamp`, plus time component functions: `dayofmonth`, `dayofweek`, `weekofyear`, `year`, `month`, `hour`, `minute`, `second`.
+- **Log Timezone**: Updated `log.*` namespace to support timezone; logs use UTC time (to be revisited later).
+- **Automated Tests**: Prepared advanced automated test suite; updated `builtin.json` and related test data.
+
+### Changed
+
+- **Constant-Like Functions**: Refactored transpiler handling of functions that behave like constants (e.g. `time`, `time()`, `na`, `na()`). Previously only `na` was supported and hardcoded; the solution is now generalized for such built-ins.
+- **Documentation**: Documentation updates.
+
 ## [0.8.10] - 2026-02-21 - Chart & Label Namespaces, For-Loop Fix
 
 ### Added
