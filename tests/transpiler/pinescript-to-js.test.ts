@@ -612,7 +612,7 @@ plot(safe)
         const result = transpile(code);
         const jsCode = result.toString();
 
-        expect(jsCode).toContain('NaN');
+        expect(jsCode).toContain('na.__value');
     });
 
     it('should handle boolean values', () => {
@@ -1137,7 +1137,7 @@ plot(close)
             const jsCode = result.toString();
 
             expect(jsCode).toBeDefined();
-            expect(jsCode).toContain('$.let.glb1_prices = $.init($.let.glb1_prices, NaN)');
+            expect(jsCode).toContain('$.let.glb1_prices = $.init($.let.glb1_prices, na.__value)');
         });
 
         it('should transpile array<float> generic syntax', () => {
@@ -1154,7 +1154,7 @@ plot(close)
             const jsCode = result.toString();
 
             expect(jsCode).toBeDefined();
-            expect(jsCode).toContain('$.let.glb1_prices = $.init($.let.glb1_prices, NaN)');
+            expect(jsCode).toContain('$.let.glb1_prices = $.init($.let.glb1_prices, na.__value)');
             // Should NOT produce standalone 'array;' expression
             expect(jsCode).not.toMatch(/^\s*array\s*;/m);
         });
@@ -1232,7 +1232,7 @@ plot(close)
             const jsCode = result.toString();
 
             expect(jsCode).toBeDefined();
-            expect(jsCode).toContain('$.let.glb1_counts = $.init($.let.glb1_counts, NaN)');
+            expect(jsCode).toContain('$.let.glb1_counts = $.init($.let.glb1_counts, na.__value)');
         });
 
         it('should transpile map<string, float> generic syntax', () => {
@@ -1249,7 +1249,7 @@ plot(close)
             const jsCode = result.toString();
 
             expect(jsCode).toBeDefined();
-            expect(jsCode).toContain('$.let.glb1_lookup = $.init($.let.glb1_lookup, NaN)');
+            expect(jsCode).toContain('$.let.glb1_lookup = $.init($.let.glb1_lookup, na.__value)');
         });
 
         it('should transpile typed array declarations inside function bodies', () => {

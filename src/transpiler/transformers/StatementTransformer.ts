@@ -4,6 +4,7 @@
 import * as walk from 'acorn-walk';
 import ScopeManager from '../analysis/ScopeManager';
 import { ASTFactory, CONTEXT_NAME } from '../utils/ASTFactory';
+import { NAMESPACES_LIKE } from '../settings';
 import {
     transformIdentifier,
     transformCallExpression,
@@ -60,9 +61,20 @@ export function transformAssignmentExpression(node: any, scopeManager: ScopeMana
         { parent: node.right, inNamespaceCall: false },
         {
             Identifier(node: any, state: any, c: any) {
-                //special case for na
-                if (node.name == 'na') {
-                    node.name = 'NaN';
+                // Rewrite NAMESPACES_LIKE entries (na, time, etc.) to $.get(__value, 0)
+                if (NAMESPACES_LIKE.includes(node.name) && scopeManager.isContextBound(node.name)) {
+                    const originalName = node.name;
+                    const valueExpr = {
+                        type: 'MemberExpression',
+                        object: { type: 'Identifier', name: originalName },
+                        property: { type: 'Identifier', name: '__value' },
+                        computed: false,
+                    };
+                    // Wrap in $.get() to extract current scalar value from Series
+                    const getCall = ASTFactory.createGetCall(valueExpr, 0);
+                    Object.assign(node, getCall);
+                    delete node.name;
+                    return;
                 }
                 node.parent = state.parent;
                 transformIdentifier(node, scopeManager);
@@ -159,9 +171,16 @@ export function transformVariableDeclaration(varNode: any, scopeManager: ScopeMa
     if (varNode._skipTransformation) return;
 
     varNode.declarations.forEach((decl: any) => {
-        //special case for na
-        if (decl.init && decl.init.name == 'na') {
-            decl.init.name = 'NaN';
+        // Rewrite NAMESPACES_LIKE entries (na, time, etc.) to .__value in variable initializers
+        if (decl.init && decl.init.type === 'Identifier' && NAMESPACES_LIKE.includes(decl.init.name) && scopeManager.isContextBound(decl.init.name)) {
+            const originalName = decl.init.name;
+            Object.assign(decl.init, {
+                type: 'MemberExpression',
+                object: { type: 'Identifier', name: originalName },
+                property: { type: 'Identifier', name: '__value' },
+                computed: false,
+            });
+            delete decl.init.name;
         }
 
         // Check if this is a context property assignment

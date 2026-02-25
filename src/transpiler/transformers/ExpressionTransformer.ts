@@ -121,11 +121,23 @@ export function transformIdentifier(node: any, scopeManager: ScopeManager): void
 
     // Transform identifiers to use the context object
     if (node.name !== CONTEXT_NAME) {
-        // Special handling for 'na' - replace with NaN unless it's a function call
-        if (node.name === 'na') {
+        // For NAMESPACES_LIKE entries with __value (e.g. na, time, time_close),
+        // rewrite bare identifier access to identifier.__value
+        if (NAMESPACES_LIKE.includes(node.name) && scopeManager.isContextBound(node.name)) {
             const isFunctionCall = node.parent && node.parent.type === 'CallExpression' && node.parent.callee === node;
-            if (!isFunctionCall) {
-                node.name = 'NaN';
+            const isMemberAccess = node.parent && node.parent.type === 'MemberExpression' && node.parent.object === node && !node.parent.computed;
+            if (!isFunctionCall && !isMemberAccess) {
+                const originalName = node.name;
+                const valueExpr = {
+                    type: 'MemberExpression',
+                    object: { type: 'Identifier', name: originalName },
+                    property: { type: 'Identifier', name: '__value' },
+                    computed: false,
+                };
+                // Wrap in $.get() to extract current scalar value from Series
+                const getCall = ASTFactory.createGetCall(valueExpr, 0);
+                Object.assign(node, getCall);
+                delete node.name;
                 return;
             }
         }
@@ -403,6 +415,20 @@ export function transformMemberExpression(memberNode: any, originalParamName: st
             return;
         }
 
+        // For NAMESPACES_LIKE entries (e.g. time[1], na[0]), access __value before $.get()
+        if (
+            memberNode.object.type === 'Identifier' &&
+            NAMESPACES_LIKE.includes(memberNode.object.name) &&
+            scopeManager.isContextBound(memberNode.object.name)
+        ) {
+            memberNode.object = {
+                type: 'MemberExpression',
+                object: { type: 'Identifier', name: memberNode.object.name },
+                property: { type: 'Identifier', name: '__value' },
+                computed: false,
+            };
+        }
+
         const getCall = ASTFactory.createGetCall(memberNode.object, memberNode.property);
 
         // Preserve location
@@ -421,8 +447,15 @@ export function transformMemberExpression(memberNode: any, originalParamName: st
 // Helper for transformFunctionArgument
 function transformIdentifierForParam(node: any, scopeManager: ScopeManager): any {
     if (node.type === 'Identifier') {
-        if (node.name === 'na') {
-            node.name = 'NaN';
+        if (NAMESPACES_LIKE.includes(node.name) && scopeManager.isContextBound(node.name)) {
+            const originalName = node.name;
+            Object.assign(node, {
+                type: 'MemberExpression',
+                object: { type: 'Identifier', name: originalName },
+                property: { type: 'Identifier', name: '__value' },
+                computed: false,
+            });
+            delete node.name;
             return node;
         }
 
@@ -602,8 +635,18 @@ function getParamFromConditionalExpression(node: any, scopeManager: ScopeManager
         {
             Identifier(node: any, state: any, c: any) {
                 if (node.name == 'NaN') return;
-                if (node.name == 'na') {
-                    node.name = 'NaN';
+                if (NAMESPACES_LIKE.includes(node.name) && scopeManager.isContextBound(node.name)) {
+                    const originalName = node.name;
+                    const valueExpr = {
+                        type: 'MemberExpression',
+                        object: { type: 'Identifier', name: originalName },
+                        property: { type: 'Identifier', name: '__value' },
+                        computed: false,
+                    };
+                    // Wrap in $.get() to extract current scalar value from Series
+                    const getCall = ASTFactory.createGetCall(valueExpr, 0);
+                    Object.assign(node, getCall);
+                    delete node.name;
                     return;
                 }
                 node.parent = state.parent;
@@ -792,10 +835,10 @@ export function transformFunctionArgument(arg: any, namespace: string, scopeMana
                 ? arg.object
                 : transformIdentifierForParam(arg.object, scopeManager);
 
-        // Transform the index if it's an identifier
+        // Transform the index if it's an identifier, and unwrap to scalar via $.get(..., 0)
         const transformedProperty =
             arg.property.type === 'Identifier' && !scopeManager.isContextBound(arg.property.name) && !scopeManager.isLoopVariable(arg.property.name)
-                ? transformIdentifierForParam(arg.property, scopeManager)
+                ? ASTFactory.createGetCall(transformIdentifierForParam(arg.property, scopeManager), 0)
                 : arg.property;
 
         const memberExpr = ASTFactory.createMemberExpression(ASTFactory.createIdentifier(namespace), ASTFactory.createIdentifier('param'));
@@ -884,12 +927,20 @@ export function transformFunctionArgument(arg: any, namespace: string, scopeMana
     }
     // For non-array-access arguments
     if (arg.type === 'Identifier') {
-        if (arg.name === 'na') {
-            arg.name = 'NaN';
-            return arg;
+        // For NAMESPACES_LIKE entries, rewrite to .__value then fall through to param wrapping
+        if (NAMESPACES_LIKE.includes(arg.name) && scopeManager.isContextBound(arg.name)) {
+            const originalName = arg.name;
+            Object.assign(arg, {
+                type: 'MemberExpression',
+                object: { type: 'Identifier', name: originalName },
+                property: { type: 'Identifier', name: '__value' },
+                computed: false,
+            });
+            delete arg.name;
+            // Fall through to param wrapping below
         }
         // If it's a context-bound variable (like a nested function parameter), use it directly
-        if (scopeManager.isContextBound(arg.name) && !scopeManager.isRootParam(arg.name)) {
+        else if (scopeManager.isContextBound(arg.name) && !scopeManager.isRootParam(arg.name)) {
             const memberExpr = ASTFactory.createMemberExpression(ASTFactory.createIdentifier(namespace), ASTFactory.createIdentifier('param'));
             const nextParamId = scopeManager.generateParamId();
             const paramCall = {

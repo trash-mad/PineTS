@@ -12,7 +12,7 @@ export class Barstate {
     }
 
     public get islast() {
-        return this.context.idx === this.context.data.close.data.length - 1;
+        return this.context.idx === this.context.length - 1;
     }
 
     public get isfirst() {

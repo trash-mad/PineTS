@@ -148,3 +148,5 @@ tests/_local
 plans/*
 
 .external
+
+tests/automated

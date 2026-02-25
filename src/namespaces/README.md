@@ -346,3 +346,75 @@ if (math.__eq(value, previousValue))
 ```
 
 **Reference:** [`src/namespaces/math/methods/__eq.ts`](math/methods/__eq.ts)
+
+---
+
+### Case #6: Dual-Use Identifiers (Variable + Function)
+
+**Problem:** Some Pine Script identifiers serve as both a variable and a callable function depending on usage context.
+
+**Examples:**
+
+```javascript
+na           // Variable: NaN value
+na(close)    // Function: checks if value is NaN
+
+time         // Variable: current bar's open time (series)
+time[1]      // Lookback: previous bar's open time
+time("D")    // Function: bar's time in daily timeframe
+```
+
+**Solution:** These identifiers are added to the `NAMESPACES_LIKE` list and implemented as namespace objects with a special `__value` property.
+
+The transpiler handles the dual-use via three transformations:
+
+1. **Bare identifier** → `identifier.__value` (returns the variable value)
+2. **Lookback access** → `$.get(identifier.__value, n)` (series indexing)
+3. **Function call** → `identifier.any(...)` (standard NAMESPACES_LIKE behavior from Case #2)
+
+**Implementation:**
+
+```typescript
+// NAHelper — __value is a constant (NaN)
+export class NAHelper {
+    get __value() { return NaN; }
+    param(source, index = 0) { return Series.from(source).get(index); }
+    any(series) { return isNaN(Series.from(series).get(0)); }
+}
+
+// TimeHelper — __value is a Series (dynamic per bar)
+export class TimeHelper {
+    get __value() { return this.context.data[this.dataField]; }
+    param(source, index = 0) { return Series.from(source).get(index); }
+    any(...args) { /* time(timeframe, session?, timezone?) */ }
+}
+```
+
+**Transpiler Changes:**
+
+The `__value` rewrite is generalized for all `NAMESPACES_LIKE` entries in several places:
+
+- `transformIdentifier` — bare identifier → `$.get(identifier.__value, 0)` (wraps in `$.get()` to extract scalar from Series)
+- `transformMemberExpression` — computed access `identifier[n]` → `$.get(identifier.__value, n)`
+- `transformFunctionArgument` — function arg → `identifier.__value` then param-wrapped (no `$.get()` — param wrapping handles Series)
+- `transformIdentifierForParam` — same as function arg: plain `identifier.__value` (no `$.get()`)
+- `transformVariableDeclaration` — `identifier.__value` assigned via `$.init()` (no `$.get()` — `$.init()` handles Series)
+- `getParamFromConditionalExpression` — ternary operands → `$.get(identifier.__value, 0)`
+- `transformAssignmentExpression` — RHS in assignments → `$.get(identifier.__value, 0)`
+
+Non-computed member access (e.g., `time.any(...)`, `hline.style_dashed`) is NOT rewritten, allowing normal namespace property access.
+
+**Files:**
+
+- [`src/namespaces/Core.ts`](Core.ts) — `NAHelper`, `TimeHelper` classes
+- [`src/transpiler/transformers/ExpressionTransformer.ts`](../transpiler/transformers/ExpressionTransformer.ts) — `__value` transformation logic (expression contexts)
+- [`src/transpiler/transformers/StatementTransformer.ts`](../transpiler/transformers/StatementTransformer.ts) — `__value` transformation logic (assignment contexts)
+- [`src/transpiler/settings.ts`](../transpiler/settings.ts) — `NAMESPACES_LIKE` list
+
+**Current Dual-Use Identifiers:**
+
+| Identifier   | `__value`            | `any()` behavior                |
+|-------------|----------------------|---------------------------------|
+| `na`        | `NaN`                | Checks if value is NaN          |
+| `time`      | `context.data.openTime` (Series) | Time filtered by timeframe/session |
+| `time_close`| `context.data.closeTime` (Series) | Close time filtered by timeframe/session |

@@ -62,7 +62,7 @@ export class PineTS {
         private timeframe?: string,
         private limit?: number,
         private sDate?: number,
-        private eDate?: number
+        private eDate?: number,
     ) {
         this._readyPromise = new Promise((resolve) => {
             this.loadMarketData(source, tickerId, timeframe, limit, sDate, eDate).then((data) => {
@@ -188,7 +188,7 @@ export class PineTS {
      */
     public stream(
         pineTSCode: Indicator | Function | String,
-        options: { pageSize?: number; live?: boolean; interval?: number } = {}
+        options: { pageSize?: number; live?: boolean; interval?: number } = {},
     ): { on: (event: 'data' | 'error', callback: Function) => void; stop: () => void } {
         const { live = true, interval = 1000 } = options;
         const pageSize = options.pageSize || this.data.length; // Default pageSize to full data if not provided
@@ -292,7 +292,7 @@ export class PineTS {
         inputs: Record<string, any>,
         periods: number | undefined,
         pageSize: number,
-        enableLiveStream: boolean = false
+        enableLiveStream: boolean = false,
     ): AsyncGenerator<Context> {
         await this.ready();
         if (!periods) periods = this.data.length;
@@ -586,6 +586,8 @@ export class PineTS {
         context.data.hlcc4 = new Series([]);
         context.data.openTime = new Series([]);
         context.data.closeTime = new Series([]);
+
+        context.length = this.data.length;
 
         return context;
     }
