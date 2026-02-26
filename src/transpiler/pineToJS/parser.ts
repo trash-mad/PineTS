@@ -299,9 +299,15 @@ export class Parser {
     // Parse type definition (v5: type X => fields, v6: type X\n fields)
     // Parse type expression with support for generics (e.g., array<float>, map<string, int>)
     parseTypeExpression() {
-        // Parse base type (e.g., "array", "matrix", "map", "float")
-        const baseType = this.expect(TokenType.IDENTIFIER).value;
-        
+        // Parse base type (e.g., "array", "matrix", "map", "float", "chart.point")
+        let baseType = this.expect(TokenType.IDENTIFIER).value;
+
+        // Handle dotted type names: chart.point, line.style, etc.
+        while (this.match(TokenType.DOT) && this.peek(1).type === TokenType.IDENTIFIER) {
+            this.advance(); // consume .
+            baseType += '.' + this.advance().value; // consume identifier
+        }
+
         // Check for generic parameters: array<float>, map<string, float>
         if (this.match(TokenType.OPERATOR, '<')) {
             this.advance(); // consume '<'
@@ -395,13 +401,26 @@ export class Parser {
             name = this.expect(TokenType.IDENTIFIER).value;
         } else if (
             this.peek().type === TokenType.IDENTIFIER &&
-            (this.peek(1).type === TokenType.IDENTIFIER || (this.peek(1).type === TokenType.OPERATOR && this.peek(1).value === '<'))
+            (this.peek(1).type === TokenType.DOT || this.peek(1).type === TokenType.IDENTIFIER || (this.peek(1).type === TokenType.OPERATOR && this.peek(1).value === '<'))
         ) {
-            // Has type: var type name = ... or var type<generic> name = ...
+            // Has type: var type name = ..., var type<generic> name = ..., or var ns.type name = ...
             varType = this.advance().value;
 
+            // Handle dotted type names: chart.point, line.style, etc.
+            while (this.match(TokenType.DOT) && this.peek(1).type === TokenType.IDENTIFIER) {
+                this.advance(); // consume .
+                varType += '.' + this.advance().value; // consume identifier
+            }
+
+            // Handle array shorthand after dotted type: chart.point[] name = ...
+            if (this.match(TokenType.LBRACKET) && this.peek(1).type === TokenType.RBRACKET) {
+                this.advance(); // consume [
+                this.advance(); // consume ]
+                varType += '[]';
+                name = this.expect(TokenType.IDENTIFIER).value;
+            }
             // Handle generic type syntax: array<float>, map<string, int>, etc.
-            if (this.match(TokenType.OPERATOR, '<')) {
+            else if (this.match(TokenType.OPERATOR, '<')) {
                 this.advance(); // consume <
                 varType += '<';
 
@@ -409,6 +428,12 @@ export class Parser {
                 while (!this.match(TokenType.OPERATOR, '>')) {
                     if (this.match(TokenType.IDENTIFIER)) {
                         varType += this.advance().value;
+                        // Handle dotted types inside generics: map<string, chart.point>
+                        while (this.match(TokenType.DOT) && this.peek(1).type === TokenType.IDENTIFIER) {
+                            varType += '.';
+                            this.advance(); // consume .
+                            varType += this.advance().value; // consume identifier
+                        }
                     } else if (this.match(TokenType.COMMA)) {
                         varType += this.advance().value;
                         this.skipNewlines();
@@ -421,9 +446,11 @@ export class Parser {
                     varType += '>';
                     this.advance();
                 }
-            }
 
-            name = this.expect(TokenType.IDENTIFIER).value;
+                name = this.expect(TokenType.IDENTIFIER).value;
+            } else {
+                name = this.expect(TokenType.IDENTIFIER).value;
+            }
         } else if (this.peek().type === TokenType.IDENTIFIER) {
             // No type: var name = ...
             name = this.advance().value;
@@ -451,6 +478,8 @@ export class Parser {
     //   IDENTIFIER IDENTIFIER ... IDENTIFIER = (simple: int x =, series float x =)
     //   IDENTIFIER [] IDENTIFIER = (array shorthand: float[] x =)
     //   IDENTIFIER <...> IDENTIFIER = (generic: array<float> x =)
+    //   IDENTIFIER.IDENTIFIER[] IDENTIFIER = (dotted array: chart.point[] x =)
+    //   IDENTIFIER.IDENTIFIER<...> IDENTIFIER = (dotted generic: map<string, chart.point> x =)
     isTypedVarDeclaration() {
         let offset = 0;
 
@@ -458,10 +487,15 @@ export class Parser {
         if (this.peek(offset).type !== TokenType.IDENTIFIER) return false;
         offset++;
 
+        // Skip dotted type name: chart.point, line.style, etc.
+        while (this.peek(offset).type === TokenType.DOT && this.peek(offset + 1).type === TokenType.IDENTIFIER) {
+            offset += 2; // skip . and IDENTIFIER
+        }
+
         // Check for array shorthand: type[] name =
         if (this.peek(offset).type === TokenType.LBRACKET && this.peek(offset + 1).type === TokenType.RBRACKET) {
             offset += 2; // skip []
-            // Now expect IDENTIFIER (name) then = 
+            // Now expect IDENTIFIER (name) then =
             if (this.peek(offset).type !== TokenType.IDENTIFIER) return false;
             offset++;
             return this.peek(offset).type === TokenType.OPERATOR && this.peek(offset).value === '=';
@@ -494,9 +528,15 @@ export class Parser {
     }
 
     // Parse typed variable declaration (int x = ... or series float x = ...)
-    // Also handles: type[] name = ... and type<generic> name = ...
+    // Also handles: type[] name = ..., type<generic> name = ..., ns.type[] name = ...
     parseTypedVarDeclaration() {
         let varType = this.advance().value;
+
+        // Handle dotted type names: chart.point, line.style, etc.
+        while (this.match(TokenType.DOT) && this.peek(1).type === TokenType.IDENTIFIER) {
+            this.advance(); // consume .
+            varType += '.' + this.advance().value; // consume identifier
+        }
 
         // Handle array shorthand: type[] name = ...
         if (this.match(TokenType.LBRACKET) && this.peek(1).type === TokenType.RBRACKET) {
@@ -513,6 +553,12 @@ export class Parser {
             while (!this.match(TokenType.OPERATOR, '>')) {
                 if (this.match(TokenType.IDENTIFIER)) {
                     varType += this.advance().value;
+                    // Handle dotted types inside generics: array<chart.point>
+                    while (this.match(TokenType.DOT) && this.peek(1).type === TokenType.IDENTIFIER) {
+                        varType += '.';
+                        this.advance(); // consume .
+                        varType += this.advance().value; // consume identifier
+                    }
                 } else if (this.match(TokenType.COMMA)) {
                     varType += this.advance().value;
                     this.skipNewlines();
@@ -1211,7 +1257,7 @@ export class Parser {
                     } else if (this.match(TokenType.OPERATOR, '>')) {
                         depth--;
                         this.advance();
-                    } else if (this.match(TokenType.IDENTIFIER) || this.match(TokenType.COMMA)) {
+                    } else if (this.match(TokenType.IDENTIFIER) || this.match(TokenType.COMMA) || this.match(TokenType.DOT)) {
                         this.advance();
                     } else {
                         // Not a generic type, restore position
