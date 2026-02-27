@@ -40,16 +40,38 @@ export class LabelHelper {
         }
     }
 
-    private _pushLabelData(lbl: LabelObject) {
+    private _syncToPlot() {
         this._ensurePlotsEntry();
-        // Store the LabelObject directly (by reference) so that
-        // subsequent setter calls (set_text, set_color, etc.) are
-        // reflected in the plot data without needing to re-push.
-        this.context.plots['__labels__'].data.push({
-            time: this.context.marketData[this.context.idx]?.openTime,
-            value: lbl,
+        // Store ALL labels as a single array value at the first bar's time.
+        // Using a live reference so setter mutations are reflected automatically.
+        // Multiple label objects at the same bar would overwrite each other
+        // in QFChart's sparse data array, so we aggregate them into one entry
+        // (same approach as LineHelper._syncToPlot).
+        const time = this.context.marketData[0]?.openTime || 0;
+        this.context.plots['__labels__'].data = [{
+            time,
+            value: this._labels,
             options: { style: 'label' },
-        });
+        }];
+    }
+
+    /**
+     * Resolve a value that may be a Series, a bound function, or a plain scalar.
+     * Pine Script variables (inputs, chart properties) can be stored as Series
+     * objects or bound methods in the PineTS runtime. This ensures the resolved
+     * scalar value is used for label properties.
+     */
+    private _resolve(val: any): any {
+        if (val === null || val === undefined) return val;
+        // Resolve Series-like objects (has data array and get method)
+        if (typeof val === 'object' && Array.isArray(val.data) && typeof val.get === 'function') {
+            return val.get(0);
+        }
+        // Resolve bound functions (like chart.bg_color, chart.fg_color)
+        if (typeof val === 'function') {
+            return val();
+        }
+        return val;
     }
 
     private _createLabel(
@@ -67,9 +89,23 @@ export class LabelHelper {
         text_font_family: string = 'family_default',
         force_overlay: boolean = false,
     ): LabelObject {
-        const lbl = new LabelObject(x, y, text, xloc, yloc, color, style, textcolor, size, textalign, tooltip, text_font_family, force_overlay);
+        // Resolve any Series/function values to scalars for label properties
+        const lbl = new LabelObject(
+            x, y,
+            this._resolve(text),
+            this._resolve(xloc),
+            this._resolve(yloc),
+            this._resolve(color),
+            this._resolve(style),
+            this._resolve(textcolor),
+            this._resolve(size),
+            this._resolve(textalign),
+            this._resolve(tooltip),
+            this._resolve(text_font_family),
+            force_overlay,
+        );
         this._labels.push(lbl);
-        this._pushLabelData(lbl);
+        this._syncToPlot();
         return lbl;
     }
 
@@ -200,7 +236,7 @@ export class LabelHelper {
         if (!id) return undefined;
         const lbl = id.copy();
         this._labels.push(lbl);
-        this._pushLabelData(lbl);
+        this._syncToPlot();
         return lbl;
     }
 

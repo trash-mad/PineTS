@@ -166,7 +166,9 @@ plot(sum)
         const jsCode = result.toString();
 
         expect(jsCode).toContain('for (');
-        expect(jsCode).toContain('let i = 0; i <= 10; i++');
+        expect(jsCode).toContain('let i = 0;');
+        expect(jsCode).toContain('i <= 10');
+        expect(jsCode).toContain('i++');
     });
 
     it('should transpile while loops', () => {

@@ -964,12 +964,35 @@ export class Parser {
             this.skipNewlines();
             const body = this.parseBlock();
 
-            // Build for loop: for (let i = start; i <= end; i++)
+            // Build for loop with runtime direction detection.
+            // Pine Script: `for i = start to end [by step]`
+            // Direction is determined at runtime (start <= end → increment, else decrement).
+            // Generated: for (let i = start; start <= end ? i <= end : i >= end; start <= end ? i++ : i--)
             const init = new VariableDeclaration([new VariableDeclarator(loopVar, start)], VariableDeclarationKind.LET);
 
-            const test = new BinaryExpression('<=', loopVar, end);
+            const directionCheck = new BinaryExpression('<=', start, end);
+            const test = new ConditionalExpression(
+                directionCheck,
+                new BinaryExpression('<=', loopVar, end),
+                new BinaryExpression('>=', loopVar, end)
+            );
 
-            const update = step ? new AssignmentExpression('+=', loopVar, step) : new UpdateExpression('++', loopVar);
+            let update;
+            if (step) {
+                // with step: start <= end ? i += step : i -= step
+                update = new ConditionalExpression(
+                    directionCheck,
+                    new AssignmentExpression('+=', loopVar, step),
+                    new AssignmentExpression('-=', loopVar, step)
+                );
+            } else {
+                // no step: start <= end ? i++ : i--
+                update = new ConditionalExpression(
+                    directionCheck,
+                    new UpdateExpression('++', loopVar),
+                    new UpdateExpression('--', loopVar)
+                );
+            }
 
             return new ForStatement(init, test, update, body);
         }

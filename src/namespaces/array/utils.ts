@@ -53,6 +53,8 @@ export function isArrayOfType(array: any[], type: PineArrayType) {
 }
 
 export function isValueOfType(value: any, type: PineArrayType) {
+    // Untyped arrays (e.g. array.new<chart.point>()) accept any value
+    if (type === PineArrayType.any) return true;
     switch (type) {
         case PineArrayType.int:
             return typeof value === 'number' && ((value | 0) === value || isNaN(value));
