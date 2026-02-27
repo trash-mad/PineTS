@@ -4,7 +4,7 @@
 import * as walk from 'acorn-walk';
 import ScopeManager from '../analysis/ScopeManager';
 import { ASTFactory, CONTEXT_NAME } from '../utils/ASTFactory';
-import { NAMESPACES_LIKE } from '../settings';
+import { NAMESPACES_LIKE, FACTORY_METHODS } from '../settings';
 import {
     transformIdentifier,
     transformCallExpression,
@@ -447,6 +447,52 @@ export function transformVariableDeclaration(varNode: any, scopeManager: ScopeMa
             if (!decl.init.property._indexTransformed) {
                 transformArrayIndex(decl.init.property, scopeManager);
                 decl.init.property._indexTransformed = true;
+            }
+        }
+
+        // For `var` declarations, wrap any hoisted factory method calls in arrow
+        // functions so they are only evaluated on bar 0 (deferred via initVar thunk).
+        // This prevents side effects (e.g. line.new() creating orphan objects) from
+        // firing on every bar when the result is discarded by initVar on bars 1+.
+        if (kind === 'var') {
+            const hoistingScope = scopeManager.getCurrentHoistingScope();
+            if (hoistingScope) {
+                for (const stmt of hoistingScope) {
+                    if (stmt.type !== 'VariableDeclaration') continue;
+                    for (const d of stmt.declarations) {
+                        if (!d.init || d.init.type !== 'CallExpression') continue;
+                        const callee = d.init.callee;
+                        if (callee?.type !== 'MemberExpression') continue;
+
+                        let namespaceName: string | undefined;
+                        const methodName = callee.property?.name;
+
+                        // Match untransformed form: line.new(...)
+                        // callee = MemberExpression(Identifier('line'), Identifier('new'))
+                        if (callee.object?.type === 'Identifier') {
+                            namespaceName = callee.object.name;
+                        }
+                        // Match transformed form: $.pine.line.new(...)
+                        // callee = MemberExpression(MemberExpression(..., 'line'), Identifier('new'))
+                        else if (callee.object?.type === 'MemberExpression' && callee.object.property?.name) {
+                            namespaceName = callee.object.property.name;
+                        }
+
+                        if (namespaceName && methodName) {
+                            const methodPath = `${namespaceName}.${methodName}`;
+                            if (FACTORY_METHODS.includes(methodPath)) {
+                                // Wrap: `const temp = call(...)` → `const temp = () => call(...)`
+                                d.init = {
+                                    type: 'ArrowFunctionExpression',
+                                    params: [],
+                                    body: d.init,
+                                    expression: true,
+                                    async: false,
+                                };
+                            }
+                        }
+                    }
+                }
             }
         }
 

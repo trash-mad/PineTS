@@ -56,6 +56,7 @@ export class ScopeManager {
     private tempVarCounter: number = 0;
     private taCallIdCounter: number = 0;
     private userCallIdCounter: number = 0;
+    private plotCallIdCounter: number = 0;
     private hoistingStack: any[][] = [];
     private suppressHoisting: boolean = false;
     private reservedNames: Set<string> = new Set();
@@ -86,6 +87,13 @@ export class ScopeManager {
         return {
             type: 'Literal',
             value: `_fn${this.userCallIdCounter++}`,
+        };
+    }
+
+    public getNextPlotCallId(): any {
+        return {
+            type: 'Literal',
+            value: `#${this.plotCallIdCounter++}`,
         };
     }
     constructor() {
@@ -246,6 +254,11 @@ export class ScopeManager {
         if (this.hoistingStack.length > 0 && !this.suppressHoisting) {
             this.hoistingStack[this.hoistingStack.length - 1].push(stmt);
         }
+    }
+
+    getCurrentHoistingScope(): any[] | null {
+        if (this.hoistingStack.length === 0) return null;
+        return this.hoistingStack[this.hoistingStack.length - 1];
     }
 
     setSuppressHoisting(suppress: boolean): void {

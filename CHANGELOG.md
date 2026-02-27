@@ -1,5 +1,23 @@
 # Change Log
 
+## [0.8.12] - 2026-02-27 - Line & Linefill Namespaces, Plot Callsite IDs, Fill Support
+
+### Added
+
+- **Line Namespace (`line.*`)**: Full implementation of the line drawing namespace including `line.new()`, `line.copy()`, and all setter/getter methods (`set_x1`, `set_y1`, `set_x2`, `set_y2`, `set_color`, `set_width`, `set_style`, `set_extend`, etc.).
+- **Linefill Namespace (`linefill.*`)**: Implementation of `linefill.new()` for filling the area between two line objects, with `set_color`, `get_color`, `delete`, and related methods.
+- **Fill Support (`fill()`)**: Implementation of the `fill()` function for filling areas between plots and hlines.
+- **Plot Callsite IDs**: Transpiler now injects unique callsite IDs (`{__callsiteId: "#N"}`) for every `plot()`/`hline()`/`fill()` call to handle duplicate plot titles ([#110](https://github.com/QuantForgeOrg/PineTS/issues/110)).
+- **Transpiler Dotted Types**: Added support for dotted type annotations in Pine Script (e.g., `chart.point`, `line`).
+
+### Fixed
+
+- **Plot Title Collisions**: Multiple plots with the same title no longer overwrite each other; collisions are resolved with human-readable `title#N` keys ([#110](https://github.com/QuantForgeOrg/PineTS/issues/110)).
+- **Var Declaration Side Effects**: Factory method calls (e.g., `line.new()`, `line.copy()`) in `var` declarations are now deferred via arrow function thunks to prevent orphan object creation on every bar.
+- **Array Initialization**: Fixed `array.new<type>()` with no arguments (e.g., `array.new<chart.point>()`).
+- **Label & Line Value Resolution**: Values passed to label and line setters can now be Series, bound functions, or plain scalars — all are correctly resolved.
+- **For Loops Runtime Direction**: Added support for for loops where the iteration direction is determined at runtime.
+
 ## [0.8.11] - 2026-02-21 - Time Functions, Log Timezone, Transpiler & TA Window Fixes
 
 ### Added

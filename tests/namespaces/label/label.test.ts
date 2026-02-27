@@ -288,9 +288,14 @@ describe('LABEL Namespace', () => {
         expect(plots['__labels__'].data.length).toBeGreaterThan(0);
 
         const labelEntry = plots['__labels__'].data[0];
-        expect(labelEntry.value.text).toBe('PlotTest');
-        expect(labelEntry.value.x).toBe(0);
-        expect(labelEntry.value.style).toBe('style_label_down');
+        // Labels are now stored as an aggregated array (like lines)
+        const labels = labelEntry.value;
+        expect(Array.isArray(labels)).toBe(true);
+        // Find our label (the first non-deleted one created on the first bar)
+        const lbl = labels.find((l: any) => l.text === 'PlotTest');
+        expect(lbl).toBeDefined();
+        expect(lbl.x).toBe(0);
+        expect(lbl.style).toBe('style_label_down');
         expect(labelEntry.options.style).toBe('label');
     });
 
@@ -305,7 +310,11 @@ describe('LABEL Namespace', () => {
         });
 
         const labelEntry = plots['__labels__'].data[0];
-        expect(labelEntry.value.text).toBe('After');
-        expect(labelEntry.value.color).toBe('#00ff00');
+        // Labels are now stored as an aggregated array (like lines)
+        const labels = labelEntry.value;
+        expect(Array.isArray(labels)).toBe(true);
+        const lbl = labels[labels.length - 1]; // Last label created on last bar
+        expect(lbl.text).toBe('After');
+        expect(lbl.color).toBe('#00ff00');
     });
 });

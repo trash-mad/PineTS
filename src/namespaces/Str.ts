@@ -9,7 +9,12 @@ export class Str {
     param(source: any, index: number = 0, name?: string) {
         return Series.from(source).get(index);
     }
-    tostring(value: any) {
+    tostring(value: any, formatStr?: string) {
+        if (formatStr === 'mintick' && typeof value === 'number') {
+            const mintick = this.context.pine?.syminfo?.mintick || 0.01;
+            const decimals = Math.max(0, -Math.floor(Math.log10(mintick)));
+            return value.toFixed(decimals);
+        }
         return String(value);
     }
     tonumber(value: any) {

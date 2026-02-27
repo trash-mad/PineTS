@@ -3,10 +3,15 @@ export const KNOWN_NAMESPACES = ['ta', 'math', 'request', 'array', 'input'];
 
 // This is used to transform ns() calls to ns.any() calls
 // Entries with a __value property also support dual-use as variables (e.g. time, na)
-export const NAMESPACES_LIKE = ['hline', 'plot', 'fill', 'label', 'na', 'time', 'time_close', 'dayofmonth', 'dayofweek', 'hour', 'minute', 'month', 'second', 'weekofyear', 'year'];
+export const NAMESPACES_LIKE = ['hline', 'plot', 'fill', 'label', 'line', 'na', 'time', 'time_close', 'dayofmonth', 'dayofweek', 'hour', 'minute', 'month', 'second', 'weekofyear', 'year'];
 
 // Async methods that require await keyword (format: 'namespace.method')
 export const ASYNC_METHODS = ['request.security', 'request.security_lower_tf'];
+
+// Factory methods that create objects with side effects (format: 'namespace.method')
+// When used inside `var` declarations, these calls are wrapped in arrow functions
+// so they are only evaluated on bar 0 (deferred evaluation via initVar thunk).
+export const FACTORY_METHODS = ['line.new', 'line.copy', 'label.new', 'label.copy'];
 
 // All known data variables in the context
 export const CONTEXT_DATA_VARS = ['open', 'high', 'low', 'close', 'volume', 'hl2', 'hlc3', 'ohlc4', 'openTime', 'closeTime'];
@@ -45,6 +50,7 @@ export const CONTEXT_PINE_VARS = [
     'label',
     'table',
     'chart',
+    'linefill',
     'map',
     'matrix',
     'log',

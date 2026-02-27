@@ -66,9 +66,9 @@ parent: API Coverage
 | `hline()`          | ✅     | Horizontal line       |
 | `hour()`           | ✅     | Hour function         |
 | `int()`            | ✅     | Integer conversion    |
-| `label()`          |        | Label object          |
+| `label()`          | ✅     | Label object          |
 | `library()`        |        | Library declaration   |
-| `line()`           |        | Line object           |
+| `line()`           | ✅     | Line object           |
 | `linefill()`       |        | Linefill object       |
 | `max_bars_back()`  |        | Maximum bars back     |
 | `minute()`         | ✅     | Minute function       |

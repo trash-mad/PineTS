@@ -20,6 +20,8 @@ import { Timeframe } from './namespaces/Timeframe';
 import { FillHelper, HlineHelper, PlotHelper } from './namespaces/Plots';
 import { ChartHelper } from './namespaces/chart/ChartHelper';
 import { LabelHelper } from './namespaces/label/LabelHelper';
+import { LineHelper } from './namespaces/line/LineHelper';
+import { LinefillHelper } from './namespaces/linefill/LinefillHelper';
 
 export class Context {
     public data: any = {
@@ -193,6 +195,7 @@ export class Context {
             },
             log: new Log(this),
             str: new Str(this),
+            // linefill namespace will be bound below via bindContextObject
             ...coreFunctions,
             ...types,
         };
@@ -304,6 +307,67 @@ export class Context {
         Object.defineProperty(this.pine['label'], 'all', {
             get: () => labelHelper.all,
         });
+
+        // line namespace
+        const lineHelper = new LineHelper(this);
+        this.bindContextObject(
+            lineHelper,
+            [
+                'any',
+                'new',
+                'param',
+                'set_x1',
+                'set_y1',
+                'set_x2',
+                'set_y2',
+                'set_xy1',
+                'set_xy2',
+                'set_color',
+                'set_width',
+                'set_style',
+                'set_extend',
+                'set_xloc',
+                'set_first_point',
+                'set_second_point',
+                'get_x1',
+                'get_y1',
+                'get_x2',
+                'get_y2',
+                'get_price',
+                'copy',
+                'delete',
+                // style constants
+                'style_solid',
+                'style_dotted',
+                'style_dashed',
+                'style_arrow_left',
+                'style_arrow_right',
+                'style_arrow_both',
+            ],
+            'line',
+        );
+        Object.defineProperty(this.pine['line'], 'all', {
+            get: () => lineHelper.all,
+        });
+
+        // linefill namespace
+        const linefillHelper = new LinefillHelper(this);
+        this.bindContextObject(
+            linefillHelper,
+            [
+                'any',
+                'new',
+                'param',
+                'set_color',
+                'get_line1',
+                'get_line2',
+                'delete',
+            ],
+            'linefill',
+        );
+        Object.defineProperty(this.pine['linefill'], 'all', {
+            get: () => linefillHelper.all,
+        });
     }
 
     private bindContextObject(instance: any, entries: string[], root: string = '') {
@@ -383,6 +447,11 @@ export class Context {
         // so the previous value is already carried over to the current slot.
         if (trg) {
             return trg;
+        }
+
+        // First bar: evaluate thunk if source is a deferred factory call
+        if (typeof src === 'function') {
+            src = src();
         }
 
         // First bar: Initialize with source value
