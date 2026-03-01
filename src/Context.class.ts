@@ -151,6 +151,9 @@ export class Context {
             year: new TimeComponentHelper(this, EXTRACTORS.year),
             //types
             bool: core.bool.bind(core),
+            int: core.int.bind(core),
+            float: core.float.bind(core),
+            string: core.string.bind(core),
         };
 
         // Initialize everything directly in pine - the default way to access everything

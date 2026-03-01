@@ -58,6 +58,9 @@ export const CONTEXT_PINE_VARS = [
     //types
     'Type', //UDT
     'bool',
+    'int',
+    'float',
+    'string',
 
     //market info
     'timeframe',

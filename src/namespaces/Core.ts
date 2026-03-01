@@ -352,7 +352,7 @@ export class Core {
             throw new Error(
                 `Cannot call "int" with argument "x"="${val}". An argument of "literal string" type was used but a "simple int" is expected.`,
             );
-        return Math.floor(val);
+        return Math.trunc(val);
     }
     float(series: any) {
         const val = Series.from(series).get(0);
