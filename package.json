@@ -105,5 +105,6 @@
     "repository": {
         "type": "git",
         "url": "git+https://github.com/QuantForgeOrg/PineTS.git"
-    }
+    },
+    "homepage": "https://quantforge.org/pinets/"
 }

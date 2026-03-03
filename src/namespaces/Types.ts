@@ -203,6 +203,18 @@ export enum splits {
     numerator = 'splits_numerator',
 }
 
+export enum position {
+    top_left = 'top_left',
+    top_center = 'top_center',
+    top_right = 'top_right',
+    middle_left = 'middle_left',
+    middle_center = 'middle_center',
+    middle_right = 'middle_right',
+    bottom_left = 'bottom_left',
+    bottom_center = 'bottom_center',
+    bottom_right = 'bottom_right',
+}
+
 const types = {
     order,
     currency,
@@ -222,6 +234,7 @@ const types = {
     earnings,
     dividends,
     splits,
+    position,
 };
 
 export default types;

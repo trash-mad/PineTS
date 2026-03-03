@@ -55,6 +55,10 @@ export class LabelObject {
         this._deleted = false;
     }
 
+    delete(): void {
+        this._deleted = true;
+    }
+
     copy(): LabelObject {
         const lbl = new LabelObject(
             this.x,
