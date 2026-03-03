@@ -21,6 +21,7 @@ import { FillHelper, HlineHelper, PlotHelper } from './namespaces/Plots';
 import { ChartHelper } from './namespaces/chart/ChartHelper';
 import { LabelHelper } from './namespaces/label/LabelHelper';
 import { LineHelper } from './namespaces/line/LineHelper';
+import { BoxHelper } from './namespaces/box/BoxHelper';
 import { LinefillHelper } from './namespaces/linefill/LinefillHelper';
 import { PolylineHelper } from './namespaces/polyline/PolylineHelper';
 import { TableHelper } from './namespaces/table/TableHelper';
@@ -353,6 +354,49 @@ export class Context {
         );
         Object.defineProperty(this.pine['line'], 'all', {
             get: () => lineHelper.all,
+        });
+
+        // box namespace
+        const boxHelper = new BoxHelper(this);
+        this.bindContextObject(
+            boxHelper,
+            [
+                'any',
+                'new',
+                'param',
+                'copy',
+                'delete',
+                'set_left',
+                'set_right',
+                'set_top',
+                'set_bottom',
+                'set_lefttop',
+                'set_rightbottom',
+                'set_top_left_point',
+                'set_bottom_right_point',
+                'set_bgcolor',
+                'set_border_color',
+                'set_border_width',
+                'set_border_style',
+                'set_extend',
+                'set_xloc',
+                'set_text',
+                'set_text_color',
+                'set_text_size',
+                'set_text_halign',
+                'set_text_valign',
+                'set_text_wrap',
+                'set_text_font_family',
+                'set_text_formatting',
+                'get_left',
+                'get_right',
+                'get_top',
+                'get_bottom',
+            ],
+            'box',
+        );
+        Object.defineProperty(this.pine['box'], 'all', {
+            get: () => boxHelper.all,
         });
 
         // linefill namespace

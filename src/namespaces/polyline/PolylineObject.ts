@@ -44,4 +44,8 @@ export class PolylineObject {
         this.force_overlay = force_overlay;
         this._deleted = false;
     }
+
+    delete(): void {
+        this._deleted = true;
+    }
 }

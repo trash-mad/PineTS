@@ -77,6 +77,10 @@ export class TableObject {
         }
     }
 
+    delete(): void {
+        this._deleted = true;
+    }
+
     setCell(column: number, row: number, props: Partial<TableCell>): void {
         if (row < 0 || row >= this.rows || column < 0 || column >= this.columns) return;
 

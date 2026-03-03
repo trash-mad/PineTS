@@ -46,6 +46,10 @@ export class LineObject {
         this._deleted = false;
     }
 
+    delete(): void {
+        this._deleted = true;
+    }
+
     copy(): LineObject {
         const ln = new LineObject(
             this.x1,
