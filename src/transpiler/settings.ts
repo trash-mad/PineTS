@@ -99,6 +99,7 @@ export const CONTEXT_PINE_VARS = [
     'yloc',
     'text',
     'font',
+    'extend',
     'position',
 
     // Adjustment constants
