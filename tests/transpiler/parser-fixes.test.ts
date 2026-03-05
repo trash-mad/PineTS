@@ -1313,3 +1313,63 @@ plot(_d ? 1 : 0, "D")
         }
     });
 });
+
+// ---------------------------------------------------------------------------
+// 14. Namespace Constants in Ternary Arguments
+// ---------------------------------------------------------------------------
+describe('Parser Fix: Namespace Constants in Ternary Arguments', () => {
+    it('should not wrap namespace property access with $.get in ternary inside function args', () => {
+        const code = `
+//@version=5
+indicator("Label Style Ternary")
+
+_above = close > open
+label.new(bar_index, close, "X",
+     style = _above ? label.style_label_down : label.style_label_up)
+`;
+        const result = transpile(code);
+        const jsCode = result.toString();
+
+        // label.style_label_down should NOT be wrapped with $.get(label.__value, 0)
+        expect(jsCode).not.toContain('label.__value');
+        // It should appear as direct namespace access
+        expect(jsCode).toContain('label.style_label_down');
+        expect(jsCode).toContain('label.style_label_up');
+    });
+
+    it('should run label with ternary style at runtime', async () => {
+        const pineTS = new PineTS(Provider.Mock, 'BTCUSDC', '60', null, new Date('2024-01-01').getTime(), new Date('2024-01-10').getTime());
+
+        const code = `
+//@version=5
+indicator("Label Style Runtime", overlay=true)
+
+_above = close > open
+label.new(bar_index, close, "X",
+     style = _above ? label.style_label_down : label.style_label_up,
+     color = color.new(color.blue, 50))
+plot(close, "Close")
+`;
+        // Should not throw "Cannot read properties of undefined (reading 'style_label_down')"
+        const { plots } = await pineTS.run(code);
+        expect(plots['Close']).toBeDefined();
+        expect(plots['__labels__']).toBeDefined();
+    });
+
+    it('should preserve line namespace constants in ternary args', () => {
+        const code = `
+//@version=5
+indicator("Line Style Ternary")
+
+_bull = close > open
+line.new(bar_index[1], close[1], bar_index, close,
+     style = _bull ? line.style_solid : line.style_dashed)
+`;
+        const result = transpile(code);
+        const jsCode = result.toString();
+
+        expect(jsCode).not.toContain('line.__value');
+        expect(jsCode).toContain('line.style_solid');
+        expect(jsCode).toContain('line.style_dashed');
+    });
+});
