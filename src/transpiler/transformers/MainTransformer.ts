@@ -242,6 +242,14 @@ export function runTransformationPass(
                 node.object.parent = node;
                 c(node.object, state);
             }
+            // Also recurse into Identifier objects so user-defined variables (like enums)
+            // get properly renamed inside function bodies.
+            // Context-bound identifiers (namespaces like color, ta) are safe — the Identifier
+            // handler returns early for them, preserving the existing namespace handling below.
+            if (node.object && node.object.type === 'Identifier' && !state.isContextBound(node.object.name)) {
+                node.object.parent = node;
+                c(node.object, state);
+            }
             transformMemberExpression(node, originalParamName, state);
         },
         AssignmentExpression(node: any, state: ScopeManager, c: any) {
