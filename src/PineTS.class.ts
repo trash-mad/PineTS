@@ -339,12 +339,19 @@ export class PineTS {
                 continue;
             }
 
-            // #4: Always recalculate last candle + new ones
+            // #4: Data changed — bump version so secondary contexts know to refresh
+            context.dataVersion++;
+
+            // Always recalculate last candle + new ones
             // Remove last result (will be recalculated with fresh data)
             this._removeLastResult(context);
 
             // Step back one position to reprocess last candle
             processedUpToIdx = this.data.length - (newCandles + 1);
+
+            // Roll back drawing objects created during the previous processing of
+            // these bars so they don't accumulate on each streaming tick.
+            context.rollbackDrawings(processedUpToIdx);
 
             // Next iteration of loop will process from updated position (#1)
 
@@ -501,6 +508,29 @@ export class PineTS {
         this.hlcc4.push((candle.high + candle.low + candle.close + candle.close) / 4);
         this.openTime.push(candle.openTime);
         this.closeTime.push(candle.closeTime);
+    }
+
+    /**
+     * Update the secondary context's tail with fresh market data.
+     * Mirrors the streaming update logic in _runPaginated:
+     * fetches new/updated candles, rolls back the last result, and re-executes
+     * only the affected bars.
+     * @param context - The cached secondary context to update
+     * @returns true if data was updated, false if no changes
+     */
+    public async updateTail(context: Context): Promise<boolean> {
+        // Guard: skip if no data (e.g. secondary context failed to load from provider)
+        if (this.data.length === 0 || Array.isArray(this.source)) return false;
+
+        const { newCandles, updatedLastCandle } = await this._updateMarketData();
+        if (newCandles === 0 && !updatedLastCandle) return false;
+
+        this._removeLastResult(context);
+        context.length = this.data.length;
+        const processFrom = this.data.length - (newCandles + 1);
+        context.rollbackDrawings(processFrom);
+        await this._executeIterations(context, this._transpiledCode as Function, processFrom, this.data.length);
+        return true;
     }
 
     /**
