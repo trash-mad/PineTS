@@ -65,6 +65,14 @@ export function isValueOfType(value: any, type: PineArrayType) {
             return typeof value === 'string';
         case PineArrayType.bool:
             return typeof value === 'boolean';
+        // Drawing object types accept any object (or null for na)
+        case PineArrayType.box:
+        case PineArrayType.label:
+        case PineArrayType.line:
+        case PineArrayType.linefill:
+        case PineArrayType.table:
+        case PineArrayType.color:
+            return value === null || typeof value === 'object' || typeof value === 'string';
     }
     return false;
 }
