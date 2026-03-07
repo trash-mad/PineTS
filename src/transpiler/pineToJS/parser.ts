@@ -353,25 +353,33 @@ export class Parser {
         // Check for generic parameters: array<float>, map<string, float>
         if (this.match(TokenType.OPERATOR, '<')) {
             this.advance(); // consume '<'
-            
+
             const typeArgs = [];
-            
+
             // Parse first type argument (recursive for nested generics)
             typeArgs.push(this.parseTypeExpression());
-            
+
             // Parse additional type arguments (for map<K, V>)
             while (this.match(TokenType.COMMA)) {
                 this.advance();
                 this.skipNewlines();
                 typeArgs.push(this.parseTypeExpression());
             }
-            
+
             this.expect(TokenType.OPERATOR, '>'); // consume '>'
-            
+
             // Return as string representation: "array<float>"
             return baseType + '<' + typeArgs.join(', ') + '>';
         }
-        
+
+        // Handle shorthand array syntax: int[] or int [] (with optional space)
+        // Pine Script allows both `int[]` and `int []` as array type notation
+        if (this.match(TokenType.LBRACKET) && this.peek(1).type === TokenType.RBRACKET) {
+            this.advance(); // consume '['
+            this.advance(); // consume ']'
+            return 'array<' + baseType + '>';
+        }
+
         return baseType; // Simple type: "float", "int", etc.
     }
 
@@ -549,7 +557,24 @@ export class Parser {
             id.varType = varType;
         }
 
-        return new VariableDeclaration([new VariableDeclarator(id, init, varType)], kind);
+        const declarators = [new VariableDeclarator(id, init, varType)];
+
+        // Handle comma-separated var declarations on the same line:
+        //   var int dir = na, var int x1 = na, var float y1 = na
+        // Each segment after the comma is a full "var type name = expr".
+        while (
+            this.match(TokenType.COMMA) &&
+            this.peek(1).type === TokenType.KEYWORD &&
+            (this.peek(1).value === 'var' || this.peek(1).value === 'varip')
+        ) {
+            this.advance(); // consume ','
+            // Recursively parse the next "var type name = expr" segment
+            const extraDecl = this.parseVarDeclaration();
+            // Merge declarators from the recursively parsed declaration
+            declarators.push(...extraDecl.declarations);
+        }
+
+        return new VariableDeclaration(declarators, kind);
     }
 
     // Lookahead to detect typed variable declaration patterns:

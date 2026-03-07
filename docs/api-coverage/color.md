@@ -35,7 +35,7 @@ parent: API Coverage
 | `color.from_gradient()` | ✅     | Create color from gradient   |
 | `color.new()`           | ✅     | Create new color             |
 | `color.rgb()`           | ✅     | Create color from RGB values |
-| `color.b()`             |        | Get blue component           |
-| `color.g()`             |        | Get green component          |
-| `color.r()`             |        | Get red component            |
-| `color.t()`             |        | Get transparency component   |
+| `color.b()`             | ✅     | Get blue component           |
+| `color.g()`             | ✅     | Get green component          |
+| `color.r()`             | ✅     | Get red component            |
+| `color.t()`             | ✅     | Get transparency component   |

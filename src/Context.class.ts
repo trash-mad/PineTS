@@ -7,6 +7,7 @@ import { PineMap } from './namespaces/map/map.index';
 import { PineMatrix } from './namespaces/matrix/matrix.index';
 import { Barstate } from './namespaces/Barstate';
 import { Core, NAHelper } from './namespaces/Core';
+import { PineColor } from './namespaces/color/PineColor';
 import { TimeHelper, TimeComponentHelper, EXTRACTORS, getDatePartsInTimezone } from './namespaces/Time';
 import { Input } from './namespaces/input/input.index';
 import PineMath from './namespaces/math/math.index';
@@ -142,7 +143,6 @@ export class Context {
             Type: core.Type.bind(core),
 
             na: new NAHelper(),
-            color: core.color,
 
             nz: core.nz.bind(core),
             indicator: core.indicator.bind(core),
@@ -458,6 +458,20 @@ export class Context {
         Object.defineProperty(this.pine['table'], 'all', {
             get: () => tableHelper.all,
         });
+
+        // color namespace
+        const colorHelper = new PineColor(this);
+        this.bindContextObject(
+            colorHelper,
+            [
+                'any', 'param', 'new', 'rgb', 'from_gradient',
+                'r', 'g', 'b', 't',
+                'aqua', 'black', 'blue', 'fuchsia', 'gray', 'green', 'lime',
+                'maroon', 'navy', 'olive', 'orange', 'purple', 'red',
+                'silver', 'teal', 'white', 'yellow',
+            ],
+            'color',
+        );
     }
 
     /**

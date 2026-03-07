@@ -19,12 +19,12 @@
     "color.yellow": true
   },
   "Color Functions": {
-    "color.b()": false,
+    "color.b()": true,
     "color.from_gradient()": true,
-    "color.g()": false,
+    "color.g()": true,
     "color.new()": true,
-    "color.r()": false,
+    "color.r()": true,
     "color.rgb()": true,
-    "color.t()": false
+    "color.t()": true
   }
 }

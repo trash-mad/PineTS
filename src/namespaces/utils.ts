@@ -98,5 +98,9 @@ export function parseArgsForPineParams<T>(args: any[], signatures: any[], types:
         }
     }
 
-    return { ...options_arg, ...options, ...override };
+    // Named args (options_arg) take precedence over positional matches (options).
+    // Without this order, multi-signature matching can produce spurious positional
+    // entries (e.g., NaN at position 2 matching 'border_color' in a secondary
+    // signature) that overwrite explicit named arguments.
+    return { ...options, ...options_arg, ...override };
 }
