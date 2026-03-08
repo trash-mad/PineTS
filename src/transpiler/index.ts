@@ -53,7 +53,7 @@ import { injectImplicitImports } from './transformers/InjectionTransformer';
 import { normalizeNativeImports } from './transformers/NormalizationTransformer';
 import { wrapInContextFunction } from './transformers/WrapperTransformer';
 import { transformNestedArrowFunctions, preProcessContextBoundVars, runAnalysisPass } from './analysis/AnalysisPass';
-import { runTransformationPass, transformEqualityChecks } from './transformers/MainTransformer';
+import { runTransformationPass, transformEqualityChecks, propagateAsyncAwait } from './transformers/MainTransformer';
 import { extractPineScriptVersion, pineToJS } from './pineToJS/pineToJS.index';
 
 function getPineTSFromSource(source: string | Function): string {
@@ -124,6 +124,11 @@ export function transpile(source: string | Function, options: { debug: boolean; 
 
     // Post-process: transform equality checks to math.__eq calls
     transformEqualityChecks(ast);
+
+    // Post-process: propagate async/await through user-defined function call chains
+    // Functions containing await (e.g., from request.security) must be async,
+    // and their callers (via $.call) must await them.
+    propagateAsyncAwait(ast);
 
     // Generate final code
     // astring exports baseGenerator (camelCase) in this version/build

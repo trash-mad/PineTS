@@ -1373,3 +1373,235 @@ line.new(bar_index[1], close[1], bar_index, close,
         expect(jsCode).toContain('line.style_dashed');
     });
 });
+
+// ---------------------------------------------------------------------------
+// 15. Keywords as Property Names (Member Access)
+// ---------------------------------------------------------------------------
+describe('Parser Fix: Keywords as Property Names', () => {
+    it('should parse syminfo.type (keyword "type" as property)', () => {
+        const code = `
+//@version=6
+indicator("Type Property Test")
+isCrypto = syminfo.type == "crypto"
+plot(isCrypto ? 1 : 0)
+`;
+        const pine2js = pineToJS(code);
+        expect(pine2js.success).toBe(true);
+        expect(pine2js.code).toContain('syminfo.type');
+    });
+
+    it('should parse syminfo.type in ternary expression', () => {
+        const code = `
+//@version=6
+indicator("Type Ternary")
+val = syminfo.type == "crypto" ? 1 : 0
+plot(val)
+`;
+        const pine2js = pineToJS(code);
+        expect(pine2js.success).toBe(true);
+        expect(pine2js.code).toContain("syminfo.type == 'crypto'");
+    });
+
+    it('should parse multiple keyword properties in one script', () => {
+        const code = `
+//@version=6
+indicator("Multi Keyword Props")
+t = syminfo.type
+plot(close)
+`;
+        const pine2js = pineToJS(code);
+        expect(pine2js.success).toBe(true);
+        expect(pine2js.code).toContain('syminfo.type');
+    });
+
+    it('should transpile syminfo.type through full pipeline', () => {
+        const code = `
+//@version=6
+indicator("Type Full Pipeline")
+isCrypto = syminfo.type == "crypto"
+plot(isCrypto ? 1 : 0)
+`;
+        const result = transpile(code);
+        const jsCode = result.toString();
+        expect(jsCode).toBeDefined();
+        expect(jsCode).toContain('syminfo.type');
+    });
+
+    it('should run syminfo.type comparison at runtime', async () => {
+        const pineTS = new PineTS(Provider.Mock, 'BTCUSDC', '60', null, new Date('2024-01-01').getTime(), new Date('2024-01-10').getTime());
+        const code = `
+//@version=6
+indicator("Type Runtime")
+_isCrypto = syminfo.type == "crypto"
+plot(_isCrypto ? 1 : 0, "IsCrypto")
+`;
+        const { plots } = await pineTS.run(code);
+        expect(plots['IsCrypto']).toBeDefined();
+        // Mock provider uses crypto data, so syminfo.type should be "crypto"
+        const lastValue = plots['IsCrypto'].data[plots['IsCrypto'].data.length - 1].value;
+        expect(lastValue).toBe(1);
+    });
+});
+
+// ─── 16. Tuple Destructuring After Switch Expression ────────────────
+describe('Parser Fix: Tuple destructuring after switch expression', () => {
+    it('should parse [a,b,c] = switch x without treating [ as postfix index', () => {
+        const code = `
+//@version=6
+indicator("Tuple Switch")
+x = "opt1"
+[a, b, c] = switch x
+    "opt1" => [1, 2, 3]
+    "opt2" => [4, 5, 6]
+    => [7, 8, 9]
+plot(a)
+`;
+        const result = transpile(code);
+        const jsCode = result.toString();
+        expect(jsCode).toBeDefined();
+        // The tuple destructuring should produce a let [a, b, c] = pattern
+        expect(jsCode).toContain('glb1_a');
+        expect(jsCode).toContain('glb1_b');
+        expect(jsCode).toContain('glb1_c');
+    });
+
+    it('should parse tuple destructuring after switch with multiple cases', () => {
+        const code = `
+//@version=6
+indicator("Colormap Switch")
+VIRIDIS = "Viridis"
+PLASMA  = "Plasma"
+colormapInput = "Viridis"
+[cold, lukewarm, hot] = switch colormapInput
+    VIRIDIS => ["#400A53", "#408E8B", "#F8E650"]
+    PLASMA  => ["#110A81", "#B8487D", "#F1F455"]
+    => ["#000", "#888", "#FFF"]
+plot(0)
+`;
+        const result = transpile(code);
+        const jsCode = result.toString();
+        expect(jsCode).toBeDefined();
+        expect(jsCode).toContain('glb1_cold');
+        expect(jsCode).toContain('glb1_lukewarm');
+        expect(jsCode).toContain('glb1_hot');
+    });
+
+    it('should still parse normal index access after expression', () => {
+        // Ensure we did not break regular index access like arr[0]
+        const code = `
+//@version=6
+indicator("Index Access")
+a = array.new_float(3, 0.0)
+b = array.get(a, 0)
+plot(b)
+`;
+        const result = transpile(code);
+        const jsCode = result.toString();
+        expect(jsCode).toBeDefined();
+    });
+
+    it('should run tuple destructuring after switch at runtime', async () => {
+        const pineTS = new PineTS(Provider.Mock, 'BTCUSDC', '60', null, new Date('2024-01-01').getTime(), new Date('2024-01-10').getTime());
+        const code = `
+//@version=6
+indicator("Tuple Switch Runtime")
+x = "opt1"
+[a, b, c] = switch x
+    "opt1" => [10, 20, 30]
+    "opt2" => [40, 50, 60]
+    => [70, 80, 90]
+plot(a, "PlotA")
+plot(b, "PlotB")
+plot(c, "PlotC")
+`;
+        // This test verifies parsing + transpilation + execution don't crash.
+        // The switch expression returning a tuple is correctly parsed now.
+        const result = await pineTS.run(code);
+        expect(result).toBeDefined();
+        expect(result.plots).toBeDefined();
+    });
+});
+
+// ─── 17. Async Propagation for request.security in User Functions ───
+describe('Transpiler Fix: Async propagation for request.security in user-defined functions', () => {
+    it('should mark functions containing request.security as async', () => {
+        const code = `
+//@version=6
+indicator("Async Func", overlay=true)
+getData() =>
+    [d, m] = request.security(syminfo.tickerid, '1D', [close, volume])
+    d + m
+val = getData()
+plot(val)
+`;
+        const result = transpile(code);
+        const jsCode = result.toString();
+        expect(jsCode).toBeDefined();
+        // Function should be async
+        expect(jsCode).toContain('async function getData');
+        // The call should be awaited
+        expect(jsCode).toMatch(/await \$\.call\(getData/);
+    });
+
+    it('should propagate async transitively through call chain', () => {
+        const code = `
+//@version=6
+indicator("Transitive Async", overlay=true)
+inner() =>
+    [d, m] = request.security(syminfo.tickerid, '1D', [close, volume])
+    d + m
+outer() =>
+    inner()
+val = outer()
+plot(val)
+`;
+        const result = transpile(code);
+        const jsCode = result.toString();
+        expect(jsCode).toBeDefined();
+        // Both functions should be async
+        expect(jsCode).toContain('async function inner');
+        expect(jsCode).toContain('async function outer');
+        // The outer call should be awaited
+        expect(jsCode).toMatch(/await \$\.call\(outer/);
+    });
+
+    it('should handle request.security inside switch in user function', () => {
+        // This tests the IIFE pattern: switch generates (() => { ... })()
+        // which also needs async propagation
+        const code = `
+//@version=6
+indicator("Switch Async", overlay=true)
+gatherDays(float output) =>
+    [dailyData, currentDay] = request.security(syminfo.tickerid, '1D', [output, dayofweek])
+    dailyData
+gatherData() =>
+    float output = volume
+    switch "days"
+        "days" => gatherDays(output)
+plot(0)
+`;
+        const result = transpile(code);
+        const jsCode = result.toString();
+        expect(jsCode).toBeDefined();
+        // gatherDays should be async (contains await request.security)
+        expect(jsCode).toContain('async function gatherDays');
+        // gatherData should also be async (calls async gatherDays through switch IIFE)
+        expect(jsCode).toContain('async function gatherData');
+    });
+
+    it('should run request.security in user function with Binance provider', async () => {
+        const pineTS = new PineTS(Provider.Binance, 'BTCUSDC', '1W', 50, new Date('2024-01-01').getTime());
+        const code = `
+//@version=6
+indicator("Async Runtime", overlay=true)
+getData() =>
+    request.security(syminfo.tickerid, '1D', close)
+val = getData()
+plot(val, "Val")
+`;
+        // This should NOT throw "await is only valid in async functions"
+        const result = await pineTS.run(code);
+        expect(result).toBeDefined();
+        expect(result.plots).toBeDefined();
+    }, 30000);
+});

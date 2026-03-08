@@ -1447,11 +1447,24 @@ export class Parser {
             else if (this.match(TokenType.DOT)) {
                 this.advance();
                 this.skipNewlines(); // Allow method chaining across lines
-                const property = this.expect(TokenType.IDENTIFIER).value;
-                expr = new MemberExpression(expr, new Identifier(property), false);
+                // Accept both IDENTIFIER and KEYWORD after DOT — keywords like
+                // 'type' can be valid property names (e.g., syminfo.type)
+                const propToken = this.peek();
+                if (propToken.type !== TokenType.IDENTIFIER && propToken.type !== TokenType.KEYWORD) {
+                    throw new Error(`Expected property name but got ${propToken.type} at ${propToken.line}:${propToken.column}`);
+                }
+                this.advance();
+                expr = new MemberExpression(expr, new Identifier(propToken.value), false);
             }
             // Index/history operator
             else if (this.match(TokenType.LBRACKET)) {
+                // If this looks like tuple destructuring [a, b, c] = ..., it's a new
+                // statement, not a postfix index on the previous expression.
+                // This happens after block expressions like switch where DEDENT is
+                // immediately followed by LBRACKET with no intervening NEWLINE.
+                if (this.isTupleDestructuring()) {
+                    break;
+                }
                 this.advance();
                 this.skipNewlines();
                 const index = this.parseExpression();
