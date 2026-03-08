@@ -663,26 +663,41 @@ export function transformForStatement(node: any, scopeManager: ScopeManager, c: 
         };
 
         // Transform any identifiers in the init expression
+        // Must wrap Series identifiers in $.get() so the loop variable receives
+        // the concrete value, not a raw Series object (e.g. `for i = bar_index to 0`).
         if (decl.init) {
             walk.recursive(decl.init, scopeManager, {
                 Identifier(node: any, state: ScopeManager) {
-                    if (!scopeManager.isLoopVariable(node.name)) {
+                    if (!scopeManager.isLoopVariable(node.name) && !node.computed) {
                         scopeManager.pushScope('for');
                         transformIdentifier(node, state);
+                        if (node.type === 'Identifier') {
+                            const isNamespaceObject =
+                                scopeManager.isContextBound(node.name) &&
+                                node.parent &&
+                                node.parent.type === 'MemberExpression' &&
+                                node.parent.object === node;
+                            if (!isNamespaceObject) {
+                                node.computed = true;
+                                addArrayAccess(node, state);
+                            }
+                        }
                         scopeManager.popScope();
                     }
                 },
-                MemberExpression(node: any) {
+                MemberExpression(node: any, state: ScopeManager, c: any) {
                     scopeManager.pushScope('for');
                     transformMemberExpression(node, '', scopeManager);
                     scopeManager.popScope();
+                    if (node.type === 'MemberExpression' && node.object) {
+                        if (node.object.type !== 'Identifier' || !scopeManager.isContextBound(node.object.name)) {
+                            c(node.object, state);
+                        }
+                    }
                 },
                 CallExpression(node: any, state: ScopeManager, c: any) {
-                    // Set parent on callee so transformMemberExpression knows it's already being called
-                    // (prevents auto-call conversion: e.g. array.size -> array.size())
                     node.callee.parent = node;
                     c(node.callee, state);
-                    // Traverse arguments so identifiers get transformed
                     for (const arg of node.arguments) {
                         c(arg, state);
                     }
@@ -744,13 +759,45 @@ export function transformForStatement(node: any, scopeManager: ScopeManager, c: 
     }
 
     // Transform update expression
+    // Must mirror the test condition walker: wrap Series identifiers in $.get(),
+    // handle MemberExpression chains and CallExpression arguments.
+    // Without this, `for i = 0 to bar_index - X` produces raw Series objects
+    // in the update ternary, causing NaN comparisons and infinite loops.
     if (node.update) {
         walk.recursive(node.update, scopeManager, {
             Identifier(node: any, state: ScopeManager) {
-                if (!scopeManager.isLoopVariable(node.name)) {
+                if (!scopeManager.isLoopVariable(node.name) && !node.computed) {
                     scopeManager.pushScope('for');
                     transformIdentifier(node, state);
+                    if (node.type === 'Identifier') {
+                        const isNamespaceObject =
+                            scopeManager.isContextBound(node.name) &&
+                            node.parent &&
+                            node.parent.type === 'MemberExpression' &&
+                            node.parent.object === node;
+                        if (!isNamespaceObject) {
+                            node.computed = true;
+                            addArrayAccess(node, state);
+                        }
+                    }
                     scopeManager.popScope();
+                }
+            },
+            MemberExpression(node: any, state: ScopeManager, c: any) {
+                scopeManager.pushScope('for');
+                transformMemberExpression(node, '', scopeManager);
+                scopeManager.popScope();
+                if (node.type === 'MemberExpression' && node.object) {
+                    if (node.object.type !== 'Identifier' || !scopeManager.isContextBound(node.object.name)) {
+                        c(node.object, state);
+                    }
+                }
+            },
+            CallExpression(node: any, state: ScopeManager, c: any) {
+                node.callee.parent = node;
+                c(node.callee, state);
+                for (const arg of node.arguments) {
+                    c(arg, state);
                 }
             },
         });
@@ -776,11 +823,24 @@ export function transformWhileStatement(node: any, scopeManager: ScopeManager, c
     scopeManager.setSuppressHoisting(true);
 
     // Transform the test condition
+    // Must wrap Series identifiers in $.get() so comparisons use concrete
+    // values, not raw Series objects (e.g. `while bar_index > cnt`).
     if (node.test) {
         walk.recursive(node.test, scopeManager, {
             Identifier(node: any, state: ScopeManager) {
                 if (!node.computed) {
                     transformIdentifier(node, state);
+                    if (node.type === 'Identifier') {
+                        const isNamespaceObject =
+                            scopeManager.isContextBound(node.name) &&
+                            node.parent &&
+                            node.parent.type === 'MemberExpression' &&
+                            node.parent.object === node;
+                        if (!isNamespaceObject) {
+                            node.computed = true;
+                            addArrayAccess(node, state);
+                        }
+                    }
                 }
             },
             MemberExpression(node: any, state: ScopeManager, c: any) {

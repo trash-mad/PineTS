@@ -101,7 +101,24 @@ export function runTransformationPass(
             node.body = newBody;
             // state.popScope();
         },
-        ReturnStatement(node: any, state: ScopeManager) {
+        ReturnStatement(node: any, state: ScopeManager, c: any) {
+            // Walk into return argument for types not handled by transformReturnStatement.
+            // transformReturnStatement has two handling phases:
+            //   Phase 1 (always): ArrayExpression, ObjectExpression, Identifier, MemberExpression
+            //   Phase 2 (curScope==='fn' only): BinaryExpression, LogicalExpression,
+            //     ConditionalExpression, CallExpression — uses its own walk.recursive
+            // When curScope !== 'fn' (e.g. return inside if/else within a function),
+            // Phase 2 is skipped and complex expression types go untransformed.
+            // We call c() to walk those cases, but ONLY when Phase 2 won't run,
+            // to avoid double-transformation.
+            if (node.argument &&
+                node.argument.type !== 'ArrayExpression' &&
+                node.argument.type !== 'ObjectExpression' &&
+                node.argument.type !== 'Identifier' &&
+                node.argument.type !== 'MemberExpression' &&
+                state.getCurrentScopeType() !== 'fn') {
+                c(node.argument, state);
+            }
             transformReturnStatement(node, state);
         },
         VariableDeclaration(node: any, state: ScopeManager) {

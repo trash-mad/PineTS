@@ -25,6 +25,30 @@ export class LinefillObject {
         this._deleted = false;
     }
 
+    // Instance methods — mirror the static methods on LinefillHelper
+    // so that instance-method syntax works when linefill is a UDT field.
+
+    get_line1(): LineObject {
+        return this.line1;
+    }
+
+    get_line2(): LineObject {
+        return this.line2;
+    }
+
+    set_color(color: any): void {
+        if (!this._deleted) {
+            // Resolve Series/thunks — instance methods receive raw transpiler
+            // values that may still be wrapped (unlike LinefillHelper.set_color
+            // which calls _resolve()).
+            if (typeof color === 'function') color = color();
+            if (color && typeof color === 'object' && Array.isArray(color.data) && typeof color.get === 'function') {
+                color = color.get(0);
+            }
+            this.color = color || '';
+        }
+    }
+
     delete(): void {
         this._deleted = true;
     }

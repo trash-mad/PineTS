@@ -14,8 +14,13 @@ const UNDEFINED_ARG = {
 export function createScopedVariableReference(name: string, scopeManager: ScopeManager): any {
     const [scopedName, kind] = scopeManager.getVariable(name);
 
-    // Check if function scoped and not $$ itself
-    if (scopedName.match(/^fn\d+_/) && name !== '$$') {
+    // Check if function scoped (directly or in a nested scope within a function)
+    // and not $$ itself.  Variables in nested scopes (if, else, for) inside
+    // functions get names like `if4_nFibL` that don't start with `fn\d+_`,
+    // so we also ask the ScopeManager whether the variable lives inside a
+    // function scope.
+    const isInFnScope = scopedName.match(/^fn\d+_/) || scopeManager.isVariableInFunctionScope(name);
+    if (isInFnScope && name !== '$$') {
         const [localCtxName] = scopeManager.getVariable('$$');
         // Only if $$ is actually found (it should be in function scope)
         if (localCtxName) {
@@ -1071,6 +1076,23 @@ export function transformFunctionArgument(arg: any, namespace: string, scopeMana
     return paramCall;
 }
 
+/** Check if a $.get() call exists anywhere in a MemberExpression/CallExpression chain */
+function hasGetCallInChain(node: any): boolean {
+    if (!node) return false;
+    if (node.type === 'CallExpression' &&
+        node.callee?.type === 'MemberExpression' &&
+        node.callee.object?.name === '$' &&
+        node.callee.property?.name === 'get') {
+        return true;
+    }
+    if (node.type === 'MemberExpression') return hasGetCallInChain(node.object);
+    // Traverse through intermediate CallExpression nodes (e.g. aEW.get(0).b5.method())
+    if (node.type === 'CallExpression' && node.callee?.type === 'MemberExpression') {
+        return hasGetCallInChain(node.callee.object);
+    }
+    return false;
+}
+
 /**
  * Recursively resolves identifiers in a callee object chain.
  * Handles patterns like: obj.get(i).out.method() where obj is a user variable
@@ -1280,7 +1302,13 @@ export function transformCallExpression(node: any, scopeManager: ScopeManager, n
         const _obj = node.callee.object;
         const isBuiltinMethodOnParam = _obj.type === 'Identifier' && scopeManager.isLocalSeriesVar(_obj.name);
 
-        if (isUserFunction && !scopeManager.isContextBound(methodName) && !isBuiltinMethodOnParam) {
+        // Guard: if the callee object is a MemberExpression (property chain like
+        // aZZ.x.set(0, val)), this is a method call on a sub-property, NOT a user
+        // function call.  User function method calls only happen on direct variable
+        // references (e.g. obj.method(args) where obj is an Identifier).
+        const isChainedPropertyMethod = _obj.type === 'MemberExpression';
+
+        if (isUserFunction && !scopeManager.isContextBound(methodName) && !isBuiltinMethodOnParam && !isChainedPropertyMethod) {
             // It's a user variable/function.
             // Transform obj.method(args) -> method(obj, args)
             // 1. Get the object (first arg)
@@ -1319,7 +1347,10 @@ export function transformCallExpression(node: any, scopeManager: ScopeManager, n
             // But here 'method' is just the property name node. We need an Identifier for the function.
             // Since function declarations are not renamed in transformFunctionDeclaration and are local identifiers,
             // we should use the identifier directly.
+            // Mark with _skipTransformation to prevent the identifier from being resolved
+            // to a same-named variable (e.g. `isSame2` function vs `isSame2` variable).
             const functionRef = ASTFactory.createIdentifier(methodName);
+            functionRef._skipTransformation = true;
 
             const newArgs = [functionRef, callId, transformedObj, ...transformedArgs];
 
@@ -1336,6 +1367,7 @@ export function transformCallExpression(node: any, scopeManager: ScopeManager, n
             // recursively resolve inner identifiers and calls
             resolveCalleeObject(node.callee.object, node.callee, scopeManager);
         }
+
     }
 
     // Transform any nested call expressions in the arguments
@@ -1404,4 +1436,16 @@ export function transformCallExpression(node: any, scopeManager: ScopeManager, n
             }
         );
     });
+
+    // Optional chaining for method calls through $.get() field chains.
+    // Prevents crash when UDT drawing fields (box/line/label) are na (undefined).
+    // $.get(X, N).field.method() → $.get(X, N).field?.method()
+    // NOTE: This must run AFTER argument transformation so that the callee is
+    // still a MemberExpression when argument type checks inspect it.
+    if (node.callee && node.callee.type === 'MemberExpression' &&
+        node.callee.object?.type === 'MemberExpression' &&
+        hasGetCallInChain(node.callee.object)) {
+        const innerCallee = Object.assign({}, node.callee, { optional: true });
+        node.callee = { type: 'ChainExpression', expression: innerCallee };
+    }
 }

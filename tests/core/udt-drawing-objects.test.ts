@@ -280,6 +280,112 @@ plot(close)
     // Non-var UDT with drawing objects (let — no thunk wrapping)
     // ----------------------------------------------------------------
 
+    // ----------------------------------------------------------------
+    // Uninitialized drawing fields: method calls return na (not crash)
+    // ----------------------------------------------------------------
+
+    it('UDT with uninitialized box field: method call returns na (not crash)', async () => {
+        const pineTS = makePineTS();
+        const code = `
+//@version=6
+indicator("na box test", overlay=true)
+type MyObj
+    box bx
+var MyObj obj = MyObj.new()
+plot(obj.bx.get_top())
+`;
+        // In Pine Script, obj.bx is na → get_top() returns na → plot shows gap (no crash)
+        // The key assertion is that run() completes without throwing
+        const { plots } = await pineTS.run(code);
+        expect(plots).toBeDefined();
+    });
+
+    it('UDT with uninitialized line field: method call returns na (not crash)', async () => {
+        const pineTS = makePineTS();
+        const code = `
+//@version=6
+indicator("na line test", overlay=true)
+type MyObj
+    line ln
+var MyObj obj = MyObj.new()
+plot(obj.ln.get_x1())
+`;
+        const { plots } = await pineTS.run(code);
+        expect(plots).toBeDefined();
+    });
+
+    it('UDT with uninitialized label field: method call returns na (not crash)', async () => {
+        const pineTS = makePineTS();
+        const code = `
+//@version=6
+indicator("na label test", overlay=true)
+type MyObj
+    label lb
+var MyObj obj = MyObj.new()
+plot(obj.lb.get_x())
+`;
+        const { plots } = await pineTS.run(code);
+        expect(plots).toBeDefined();
+    });
+
+    // ----------------------------------------------------------------
+    // Linefill instance methods on UDT fields
+    // ----------------------------------------------------------------
+
+    it('LinefillObject instance methods: get_line1/get_line2/set_color', async () => {
+        const pineTS = makePineTS();
+
+        const { result } = await pineTS.run((context) => {
+            const { Type, line, linefill } = context.pine;
+
+            const l1 = line.new(0, 100, 10, 200);
+            const l2 = line.new(0, 300, 10, 400);
+            const lf = linefill.new(l1, l2, '#0000ff');
+
+            // Instance methods
+            const gotLine1 = lf.get_line1();
+            const gotLine2 = lf.get_line2();
+            const isSameLine1 = gotLine1 === l1;
+            const isSameLine2 = gotLine2 === l2;
+
+            // set_color instance method
+            lf.set_color('#ff0000');
+            const newColor = lf.color;
+
+            return { isSameLine1, isSameLine2, newColor };
+        });
+
+        expect(result.isSameLine1[0]).toBe(true);
+        expect(result.isSameLine2[0]).toBe(true);
+        expect(result.newColor[0]).toBe('#ff0000');
+    });
+
+    it('UDT with linefill field: get_line1().set_xy1() chain works (Pine source)', async () => {
+        const pineTS = makePineTS();
+        const code = `
+//@version=6
+indicator("linefill chain", overlay=true)
+type MyObj
+    linefill lf
+
+var l1 = line.new(0, 100, 10, 200)
+var l2 = line.new(0, 300, 10, 400)
+var MyObj obj = MyObj.new(
+    lf = linefill.new(l1, l2, "#0000ff")
+)
+obj.lf.get_line1().set_xy1(bar_index - 5, close)
+obj.lf.get_line2().set_xy1(bar_index - 5, open)
+obj.lf.set_color("#ff0000")
+plot(close)
+`;
+        const { plots } = await pineTS.run(code);
+        expect(plots).toBeDefined();
+    });
+
+    // ----------------------------------------------------------------
+    // Non-var UDT with drawing objects (let — no thunk wrapping)
+    // ----------------------------------------------------------------
+
     it('let UDT with line field works without thunks', async () => {
         const pineTS = makePineTS();
 

@@ -153,7 +153,9 @@ export class Core {
     alertcondition(condition, title, message) {
         console.warn('alertcondition called but is currently not implemented', condition, title, message);
     }
-
+    alert(...args: any[]) {
+        console.warn('alert called but is currently not implemented', args);
+    }
     max_bars_back(series?: any, length?: any) {
         // No-op in PineTS — Pine Script uses this to hint the runtime about
         // how many historical bars a series needs. PineTS keeps full history.
@@ -331,9 +333,32 @@ export class Core {
             new: function (...args: any[]) {
                 // Map positional args to field names, applying defaults for missing args
                 const mappedArgs: Record<string, any> = {};
+
+                // Detect named args object: if the first (and only) argument is a plain
+                // object whose keys match field names, treat it as named arguments.
+                // This handles the Pine pattern: MyType.new(field1 = val1, field2 = val2)
+                // which the transpiler converts to: MyType.new({ field1: val1, field2: val2 })
+                let namedArgs: Record<string, any> | null = null;
+                if (
+                    args.length === 1 &&
+                    args[0] &&
+                    typeof args[0] === 'object' &&
+                    !(args[0] instanceof Series) &&
+                    !Array.isArray(args[0]) &&
+                    !(args[0] instanceof PineTypeObject)
+                ) {
+                    const keys = Object.keys(args[0]);
+                    if (keys.length > 0 && keys.some((k) => definitionKeys.includes(k))) {
+                        namedArgs = args[0];
+                        args = []; // Clear positional args
+                    }
+                }
+
                 for (let i = 0; i < definitionKeys.length; i++) {
                     const key = definitionKeys[i];
-                    if (i < args.length) {
+                    if (namedArgs && key in namedArgs) {
+                        mappedArgs[key] = namedArgs[key];
+                    } else if (i < args.length) {
                         mappedArgs[key] = args[i];
                     } else if (key in fieldDefaults) {
                         // Evaluate default at construction time — handles series references
