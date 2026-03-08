@@ -98,7 +98,10 @@ export class PineColor {
 
     // ── Type-cast: color(na) → color.any(na) ──────────────────────────
     any(value: any) {
-        return Series.from(value).get(0);
+        const resolved = Series.from(value).get(0);
+        // NaN means na (Pine Script's "no value") → return null for transparent
+        if (typeof resolved === 'number' && isNaN(resolved)) return null;
+        return resolved;
     }
 
     // ── Series unwrapping for param() ─────────────────────────────────

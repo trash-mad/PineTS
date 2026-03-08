@@ -64,16 +64,21 @@ export class LabelHelper {
      */
     private _resolve(val: any): any {
         if (val === null || val === undefined) return val;
-        // NAHelper (na) → resolve to NaN
-        if (val instanceof NAHelper) return NaN;
+        // NAHelper (na) → resolve to null (Pine Script na)
+        if (val instanceof NAHelper) return null;
         // Resolve Series-like objects (has data array and get method)
         if (typeof val === 'object' && Array.isArray(val.data) && typeof val.get === 'function') {
-            return val.get(0);
+            const resolved = val.get(0);
+            // NaN from Series (e.g. color(na) → Series.from(NaN).get(0)) means na
+            if (typeof resolved === 'number' && isNaN(resolved)) return null;
+            return resolved;
         }
         // Resolve bound functions (like chart.bg_color, chart.fg_color)
         if (typeof val === 'function') {
             return val();
         }
+        // NaN scalar (e.g. color(na) resolved to NaN) means na
+        if (typeof val === 'number' && isNaN(val)) return null;
         return val;
     }
 

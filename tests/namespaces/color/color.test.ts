@@ -280,7 +280,8 @@ describe('Color Namespace', () => {
 
         const { result } = await pineTS.run(sourceCode);
 
-        expect(last(result.cast_na)).toBeNaN();
+        // color(na) returns null (Pine Script na for colors, not NaN)
+        expect(last(result.cast_na)).toBeNull();
         expect(last(result.cast_hex)).toBe('#FF0000');
     });
 

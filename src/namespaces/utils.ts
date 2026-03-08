@@ -83,9 +83,12 @@ export function parseArgsForPineParams<T>(args: any[], signatures: any[], types:
                 continue;
             }
 
-            // NaN represents Pine Script's `na` — always accept it regardless of expected type.
-            // This preserves "no value" semantics for colors, strings, etc.
-            if (typeof arg === 'number' && isNaN(arg)) {
+            // NaN represents Pine Script's `na` — accept it for numeric and color
+            // parameters (where na is a valid "no value"). For string/boolean/point
+            // parameters, NaN should invalidate the signature to prevent multi-sig
+            // conflicts (e.g., line.new(na,na,na,na) where sig2 maps pos 2 to xloc).
+            const expectedType = types[optionName];
+            if (typeof arg === 'number' && isNaN(arg) && (expectedType === 'number' || expectedType === 'series')) {
                 options[optionName] = arg;
             } else {
                 const typeChecker = TYPE_CHECK[types[optionName]];

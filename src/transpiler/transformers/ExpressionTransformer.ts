@@ -972,8 +972,12 @@ export function transformFunctionArgument(arg: any, namespace: string, scopeMana
         arg.properties = arg.properties.map((prop: any) => {
             // Get the variable name and kind
             if (prop.value.name) {
-                // If it's a context-bound variable (like 'close', 'open') and not a root param
-                if (scopeManager.isContextBound(prop.value.name) && !scopeManager.isRootParam(prop.value.name)) {
+                // If it's a context-bound variable (like 'close', 'open'), a local series
+                // var (non-root function parameter like 'col' in in_out()), or a loop
+                // variable — use the raw identifier, not a scoped reference.
+                if (scopeManager.isContextBound(prop.value.name) ||
+                    scopeManager.isLocalSeriesVar(prop.value.name) ||
+                    scopeManager.isLoopVariable(prop.value.name)) {
                     return {
                         type: 'Property',
                         key: {
