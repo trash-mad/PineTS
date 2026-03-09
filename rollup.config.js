@@ -110,6 +110,7 @@ const BrowserConfigDev = {
         format: 'umd',
         name: 'PineTSLib',
         exports: 'auto',
+        sourcemap: true,
     },
     plugins: [
         excludeMockProvider(),
