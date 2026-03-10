@@ -34,6 +34,9 @@ export class TableHelper {
 
     private _resolve(val: any): any {
         if (val === null || val === undefined) return val;
+        // NAHelper object — Pine Script's `na` used as a value resolves to NaN.
+        // This happens when na is a default parameter (e.g., `color background = na`).
+        if (typeof val === 'object' && '__value' in val) return val.__value;
         if (typeof val === 'object' && Array.isArray(val.data) && typeof val.get === 'function') {
             return val.get(0);
         }
