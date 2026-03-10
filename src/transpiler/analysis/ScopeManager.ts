@@ -61,6 +61,7 @@ export class ScopeManager {
     private suppressHoisting: boolean = false;
     private reservedNames: Set<string> = new Set();
     private userFunctions: Set<string> = new Set();
+    private userMethods: Set<string> = new Set();
 
     public get nextParamIdArg(): any {
         return {
@@ -201,6 +202,14 @@ export class ScopeManager {
 
     isUserFunction(name: string): boolean {
         return this.userFunctions.has(name);
+    }
+
+    addUserMethod(name: string): void {
+        this.userMethods.add(name);
+    }
+
+    isUserMethod(name: string): boolean {
+        return this.userMethods.has(name);
     }
 
     addVariable(name: string, kind: string): string {

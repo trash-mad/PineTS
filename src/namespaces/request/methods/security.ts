@@ -6,6 +6,24 @@ import { TIMEFRAMES, normalizeTimeframe } from '../utils/TIMEFRAMES';
 import { findSecContextIdx } from '../utils/findSecContextIdx';
 import { findLTFContextIdx } from '../utils/findLTFContextIdx';
 
+/**
+ * Resolve raw expression values that may contain helper objects
+ * (TimeComponentHelper, TimeHelper, NAHelper, Series, etc.)
+ * into their primitive values.  This is needed for same-timeframe
+ * and secondary-context shortcuts where the expression isn't
+ * re-evaluated through a full secondary run.
+ */
+function resolveExprValue(v: any): any {
+    if (v == null || typeof v !== 'object') return v;
+    // TimeComponentHelper, TimeHelper, NAHelper — expose __value
+    if ('__value' in v) return v.__value;
+    // Series — get current value
+    if (v instanceof Series) return v.get(0);
+    // Tuple array — resolve each element
+    if (Array.isArray(v)) return v.map(resolveExprValue);
+    return v;
+}
+
 export function security(context: any) {
     return async (
         symbol: any,
@@ -39,7 +57,8 @@ export function security(context: any) {
         // If this is a secondary context (created by another request.security),
         // just return the expression value directly without creating another context
         if (context.isSecondaryContext) {
-            return Array.isArray(_expression) ? [_expression] : _expression;
+            const resolved = resolveExprValue(_expression);
+            return Array.isArray(resolved) ? [resolved] : resolved;
         }
 
         const ctxTimeframeIdx = TIMEFRAMES.indexOf(normalizeTimeframe(context.timeframe));
@@ -50,9 +69,11 @@ export function security(context: any) {
         }
 
         if (ctxTimeframeIdx === reqTimeframeIdx) {
-            // Wrap tuples in 2D array to match $.precision() convention
-            // (same wrapping as HTF/LTF return paths below)
-            return Array.isArray(_expression) ? [_expression] : _expression;
+            // Same-timeframe shortcut: resolve any helper objects (TimeComponentHelper,
+            // NAHelper, Series, etc.) in the expression that haven't been extracted
+            // to their primitive values yet.
+            const resolved = resolveExprValue(_expression);
+            return Array.isArray(resolved) ? [resolved] : resolved;
         }
 
         const isLTF = ctxTimeframeIdx > reqTimeframeIdx;

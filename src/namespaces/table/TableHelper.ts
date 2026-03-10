@@ -137,7 +137,9 @@ export class TableHelper {
         const hasOpts = lastArg && typeof lastArg === 'object' && !Array.isArray(lastArg)
             && ('text' in lastArg || 'bgcolor' in lastArg || 'text_color' in lastArg
                 || 'text_size' in lastArg || 'text_halign' in lastArg || 'tooltip' in lastArg
-                || 'column' in lastArg || 'row' in lastArg);
+                || 'column' in lastArg || 'row' in lastArg
+                || 'height' in lastArg || 'width' in lastArg
+                || 'text_valign' in lastArg || 'text_font_family' in lastArg);
 
         if (hasOpts) {
             const opts = lastArg;

@@ -1335,7 +1335,13 @@ export function transformCallExpression(node: any, scopeManager: ScopeManager, n
         // references (e.g. obj.method(args) where obj is an Identifier).
         const isChainedPropertyMethod = _obj.type === 'MemberExpression';
 
-        if (isUserFunction && !scopeManager.isContextBound(methodName) && !isBuiltinMethodOnParam && !isChainedPropertyMethod) {
+        // Only allow obj.method(args) → method(obj, args) for functions declared
+        // with the Pine `method` keyword.  Regular functions (without `method`)
+        // must NOT be callable via dot-notation — obj.func() is always a built-in
+        // method call on the object, never a call to a user-defined function.
+        const isUserMethod = scopeManager.isUserMethod(methodName);
+
+        if (isUserFunction && isUserMethod && !scopeManager.isContextBound(methodName) && !isBuiltinMethodOnParam && !isChainedPropertyMethod) {
             // It's a user variable/function.
             // Transform obj.method(args) -> method(obj, args)
             // 1. Get the object (first arg)

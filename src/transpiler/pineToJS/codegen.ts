@@ -299,6 +299,14 @@ export class CodeGenerator {
         this.write(') ');
         this.generateBlockStatement(node.body, false);
         this.write('\n');
+
+        // Emit method marker so the transpile phase can distinguish Pine `method`
+        // declarations from regular functions.  Regular functions must NOT be
+        // callable via obj.func() dot-notation — only `method` declarations can.
+        if (isMethod) {
+            this.write(this.indentStr.repeat(this.indent));
+            this.write(`${node.id.name}.__pineMethod__ = true;\n`);
+        }
     }
 
     // Generate VariableDeclaration

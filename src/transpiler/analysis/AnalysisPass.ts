@@ -123,6 +123,20 @@ export function runAnalysisPass(ast: any, scopeManager: ScopeManager): string | 
                 scopeManager.addUserFunction(node.id.name);
             }
         },
+        // Detect Pine `method` markers emitted by codegen: name.__pineMethod__ = true;
+        // These mark user functions declared with the `method` keyword, which ARE
+        // allowed to be called with obj.method() dot-notation.  Regular functions
+        // (without `method`) must NOT be callable via dot-notation.
+        ExpressionStatement(node: any) {
+            const expr = node.expression;
+            if (expr && expr.type === 'AssignmentExpression' && expr.operator === '=' &&
+                expr.left?.type === 'MemberExpression' &&
+                expr.left.property?.name === '__pineMethod__' &&
+                expr.left.object?.type === 'Identifier' &&
+                expr.right?.value === true) {
+                scopeManager.addUserMethod(expr.left.object.name);
+            }
+        },
         ArrowFunctionExpression(node: any) {
             const isRootFunction = node.start === 0;
             if (isRootFunction && node.params && node.params.length > 0) {
