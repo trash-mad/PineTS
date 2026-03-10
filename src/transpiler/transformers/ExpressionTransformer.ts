@@ -106,6 +106,16 @@ export function transformArrayIndex(node: any, scopeManager: ScopeManager): void
             }
         }
     }
+
+    // Handle complex index expressions (BinaryExpression, UnaryExpression, etc.)
+    // when neither block above matched — e.g. func()[expr * 2], close[a + b] with non-Identifier object.
+    if (node.computed && node.property.type !== 'Identifier' && node.property.type !== 'MemberExpression'
+        && !node._indexTransformed) {
+        if (node.property.type === 'BinaryExpression' || node.property.type === 'UnaryExpression' ||
+            node.property.type === 'LogicalExpression' || node.property.type === 'ConditionalExpression') {
+            node.property = transformOperand(node.property, scopeManager);
+        }
+    }
 }
 
 export function addArrayAccess(node: any, scopeManager: ScopeManager): void {
@@ -877,11 +887,18 @@ export function transformFunctionArgument(arg: any, namespace: string, scopeMana
                 ? arg.object
                 : transformIdentifierForParam(arg.object, scopeManager);
 
-        // Transform the index if it's an identifier, and unwrap to scalar via $.get(..., 0)
-        const transformedProperty =
-            arg.property.type === 'Identifier' && !scopeManager.isContextBound(arg.property.name) && !scopeManager.isLoopVariable(arg.property.name)
-                ? ASTFactory.createGetCall(transformIdentifierForParam(arg.property, scopeManager), 0)
-                : arg.property;
+        // Transform the index expression and unwrap to scalar via $.get(..., 0)
+        let transformedProperty: any;
+        if (arg.property.type === 'Identifier' && !scopeManager.isContextBound(arg.property.name) && !scopeManager.isLoopVariable(arg.property.name)) {
+            transformedProperty = ASTFactory.createGetCall(transformIdentifierForParam(arg.property, scopeManager), 0);
+        } else if (arg.property.type === 'BinaryExpression' || arg.property.type === 'UnaryExpression' ||
+                   arg.property.type === 'LogicalExpression' || arg.property.type === 'ConditionalExpression') {
+            // Recursively transform identifiers inside complex index expressions
+            // e.g. close[strideInput * 2] → ta.param(close, $.get($.let.glb1_strideInput, 0) * 2, 'p2')
+            transformedProperty = transformOperand(arg.property, scopeManager, namespace);
+        } else {
+            transformedProperty = arg.property;
+        }
 
         const memberExpr = ASTFactory.createMemberExpression(ASTFactory.createIdentifier(namespace), ASTFactory.createIdentifier('param'));
 

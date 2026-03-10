@@ -123,6 +123,94 @@ plot(t.perf, "perf")
         expect(hasFiniteValue).toBe(true);
     });
 
+    it('complex index expression in bracket access (BinaryExpression)', async () => {
+        // Tests that close[strideInput * 2] correctly transforms the BinaryExpression index
+        // so identifiers inside the index get properly scoped ($.get($.let.glb1_strideInput, 0) * 2)
+        const code = `
+//@version=5
+indicator("Complex Bracket Index")
+
+int strideInput = 1
+float rsiLong = ta.rsi(close[strideInput * 2], 3)
+
+plot(rsiLong, "rsi")
+`;
+        const { plots } = await pineTS.run(code);
+
+        const rsiData = plots['rsi'].data;
+        // RSI should produce valid values (not NaN/crash) after warmup period
+        let hasValidValue = false;
+        for (let i = 5; i < rsiData.length; i++) {
+            if (rsiData[i].value !== null && isFinite(rsiData[i].value)) {
+                hasValidValue = true;
+                break;
+            }
+        }
+        expect(hasValidValue).toBe(true);
+    });
+
+    it('complex index expression in user function (BinaryExpression)', async () => {
+        // Tests that src[stride * 3] inside a user function correctly transforms
+        // the function parameter `stride` inside the BinaryExpression index
+        const code = `
+//@version=5
+indicator("Complex Bracket in Function")
+
+myFunc(src, stride) =>
+    ta.sma(src[stride * 3], 5)
+
+int strideInput = 1
+float test3 = myFunc(close, strideInput)
+
+plot(test3, "sma")
+`;
+        const { plots } = await pineTS.run(code);
+
+        const smaData = plots['sma'].data;
+        // SMA should produce valid values after warmup
+        let hasValidValue = false;
+        for (let i = 10; i < smaData.length; i++) {
+            if (smaData[i].value !== null && isFinite(smaData[i].value)) {
+                hasValidValue = true;
+                break;
+            }
+        }
+        expect(hasValidValue).toBe(true);
+    });
+
+    it('complex index in standalone bracket access (BinaryExpression via transformArrayIndex)', async () => {
+        // Tests that close[strideInput * 2] in a standalone assignment (not inside a namespace call)
+        // correctly transforms via transformArrayIndex — identifiers in the BinaryExpression index
+        // must be scoped ($.get($.let.glb1_strideInput, 0) * 2)
+        const code = `
+//@version=5
+indicator("Standalone Complex Bracket Index")
+
+int strideInput = 1
+
+// Standalone bracket with BinaryExpression index (goes through transformArrayIndex, not transformFunctionArgument)
+float test1 = close[strideInput * 2]
+float test2 = close[strideInput + 1]
+
+plot(test1, "lookback_mul")
+plot(test2, "lookback_add")
+`;
+        const { plots } = await pineTS.run(code);
+
+        const data1 = plots['lookback_mul'].data;
+        const data2 = plots['lookback_add'].data;
+        // Should produce valid values (not crash with "strideInput is not defined")
+        let hasValid1 = false;
+        let hasValid2 = false;
+        for (let i = 5; i < data1.length; i++) {
+            if (data1[i].value !== null && isFinite(data1[i].value)) hasValid1 = true;
+            if (data2[i].value !== null && isFinite(data2[i].value)) hasValid2 = true;
+            if (hasValid1 && hasValid2) break;
+        }
+        expect(hasValid1).toBe(true);
+        expect(hasValid2).toBe(true);
+    });
+
     it('loop variable UDT field access in call arguments', async () => {
         // Tests that element.field inside a for-in loop works correctly
         // inside function call arguments

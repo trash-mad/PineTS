@@ -500,8 +500,8 @@ export class FillHelper {
                 fillKey = callsiteId;
             }
 
-            // Detect if color is a Series (changes per bar) vs a constant
-            const isSeriesColor = color && typeof color === 'object' && Array.isArray((color as any).data);
+            // Resolve the color for this bar.
+            // The color may be a Series, a param tuple [value, name], or a plain string.
             const resolvedColor = Series.from(color).get(0);
 
             if (!this.context.plots[fillKey]) {
@@ -511,7 +511,7 @@ export class FillHelper {
                     title: title || 'Fill',
                     plot1: p1Key,
                     plot2: p2Key,
-                    ...(isSeriesColor ? { data: [] } : {}),
+                    data: [],
                     options: {
                         plot1: p1Key,
                         plot2: p2Key,
@@ -522,14 +522,13 @@ export class FillHelper {
                 };
             }
 
-            // Only push per-bar color data when color is a Series (changes per bar)
-            if (isSeriesColor) {
-                this.context.plots[fillKey].data.push({
-                    time: this.context.marketData[this.context.idx].openTime,
-                    value: null,
-                    options: { color: resolvedColor },
-                });
-            }
+            // Always push per-bar color data so dynamic colors (e.g. green/red flip) work.
+            // The fill renderer will use per-bar colors when the data array is populated.
+            this.context.plots[fillKey].data.push({
+                time: this.context.marketData[this.context.idx].openTime,
+                value: null,
+                options: { color: resolvedColor },
+            });
         }
     }
 }

@@ -152,6 +152,59 @@ describe('FILL Namespace', () => {
         expect(fillEntry.options.color).toBe('#ff000080');
     });
 
+    it('fill() always stores per-bar color data for dynamic colors', async () => {
+        const pineTS = new PineTS(Provider.Mock, 'BTCUSDC', 'D', null, new Date('2025-01-01').getTime(), new Date('2025-01-10').getTime());
+
+        const { plots } = await pineTS.run((context) => {
+            var p1 = plot(close, 'Upper');
+            var p2 = plot(open, 'Lower');
+            // Dynamic color: flips green/red based on close > open
+            fill(p1, p2, close > open ? color.green : color.red);
+            return {};
+        });
+
+        const fillEntry = Object.values(plots).find((p: any) => p.options?.style === 'fill') as any;
+        expect(fillEntry).toBeDefined();
+
+        // Fill should have per-bar data with color in options
+        expect(fillEntry.data).toBeDefined();
+        expect(fillEntry.data.length).toBeGreaterThan(0);
+
+        // Each data entry should have an options.color
+        for (const d of fillEntry.data) {
+            expect(d.options).toBeDefined();
+            expect(d.options.color).toBeDefined();
+            expect(typeof d.options.color).toBe('string');
+        }
+
+        // Should contain both green and red entries (since some bars are bullish, some bearish)
+        const uniqueColors = new Set(fillEntry.data.map((d: any) => d.options.color));
+        expect(uniqueColors.size).toBeGreaterThanOrEqual(1);
+    });
+
+    it('fill() with static color still stores per-bar data', async () => {
+        const pineTS = new PineTS(Provider.Mock, 'BTCUSDC', 'D', null, new Date('2025-01-01').getTime(), new Date('2025-01-10').getTime());
+
+        const { plots } = await pineTS.run((context) => {
+            var p1 = plot(close, 'Top');
+            var p2 = plot(open, 'Bottom');
+            fill(p1, p2, color.new(color.blue, 80));
+            return {};
+        });
+
+        const fillEntry = Object.values(plots).find((p: any) => p.options?.style === 'fill') as any;
+        expect(fillEntry).toBeDefined();
+
+        // Even static colors should have per-bar data (always pushed now)
+        expect(fillEntry.data).toBeDefined();
+        expect(fillEntry.data.length).toBeGreaterThan(0);
+
+        // All entries should have the same color
+        const colors = fillEntry.data.map((d: any) => d.options.color);
+        const uniqueColors = new Set(colors);
+        expect(uniqueColors.size).toBe(1);
+    });
+
     it('fill() with title uses title-based key', async () => {
         const pineTS = new PineTS(Provider.Mock, 'BTCUSDC', 'D', null, new Date('2025-01-01').getTime(), new Date('2025-01-10').getTime());
 

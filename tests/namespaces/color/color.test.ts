@@ -125,6 +125,80 @@ describe('Color Namespace', () => {
         expect(last(result.na_color)).toBeNaN();
     });
 
+    it('color.new() should apply transparency to rgb() string input', async () => {
+        const pineTS = new PineTS(Provider.Mock, 'BTCUSDC', 'D', null, sDate, eDate);
+
+        const sourceCode = (context: any) => {
+            const { color } = context.pine;
+
+            // color.rgb() returns "rgb(r,g,b)" string
+            const rgb_input = color.rgb(207, 23, 23);
+            // color.new() with rgb() input should produce valid hex, not "rgba(rgb(...), alpha)"
+            const with_alpha = color.new(rgb_input, 85);
+            const with_zero = color.new(rgb_input, 0);
+            const no_alpha = color.new(rgb_input);
+
+            return { rgb_input, with_alpha, with_zero, no_alpha };
+        };
+
+        const { result } = await pineTS.run(sourceCode);
+
+        expect(last(result.rgb_input)).toBe('rgb(207, 23, 23)');
+        // 85% transparency → alpha = (100-85)/100*255 = 38.25 → 0x26
+        expect(last(result.with_alpha)).toBe('#cf171726');
+        // 0% transparency → fully opaque → alpha = FF
+        expect(last(result.with_zero)).toBe('#cf1717FF');
+        // No alpha arg → return as-is
+        expect(last(result.no_alpha)).toBe('rgb(207, 23, 23)');
+    });
+
+    it('color.new() should replace alpha when input already has alpha (#RRGGBBAA)', async () => {
+        const pineTS = new PineTS(Provider.Mock, 'BTCUSDC', 'D', null, sDate, eDate);
+
+        const sourceCode = (context: any) => {
+            const { color } = context.pine;
+
+            // Simulate double color.new(): get_color() returns color.new(#00ff00, 0) = #00ff00FF
+            const first_pass = color.new('#00ff00', 0);   // → "#00ff00FF"
+            // Then bgcolor does color.new(first_pass, 85) — should REPLACE alpha, not append
+            const second_pass = color.new(first_pass, 85); // → should be "#00ff0026", NOT "#00ff00FF26"
+
+            // Also test with a named color double-wrap
+            const red_opaque = color.new(color.red(), 0);   // → "#F23645FF"
+            const red_semi = color.new(red_opaque, 50);      // → should be "#F236457F"
+
+            return { first_pass, second_pass, red_opaque, red_semi };
+        };
+
+        const { result } = await pineTS.run(sourceCode);
+
+        expect(last(result.first_pass)).toBe('#00ff00FF');
+        expect(last(result.second_pass)).toBe('#00ff0026');  // replaced alpha, not appended
+        expect(last(result.red_opaque)).toBe('#F23645FF');
+        expect(last(result.red_semi)).toBe('#F236457F');     // replaced alpha, not appended
+    });
+
+    it('color.new() should apply transparency to rgba() string input', async () => {
+        const pineTS = new PineTS(Provider.Mock, 'BTCUSDC', 'D', null, sDate, eDate);
+
+        const sourceCode = (context: any) => {
+            const { color } = context.pine;
+
+            // color.rgb() with alpha returns "rgba(r,g,b,a)" string
+            const rgba_input = color.rgb(100, 200, 50, 30);
+            // color.new() should parse rgba() and apply new alpha
+            const with_alpha = color.new(rgba_input, 50);
+
+            return { rgba_input, with_alpha };
+        };
+
+        const { result } = await pineTS.run(sourceCode);
+
+        expect(last(result.rgba_input)).toBe('rgba(100, 200, 50, 0.7)');
+        // 50% transparency → alpha = 127 → 0x7F
+        expect(last(result.with_alpha)).toBe('#64c8327F');
+    });
+
     // ── color.rgb() ─────────────────────────────────────────────────
 
     it('color.rgb() should create color from RGB components', async () => {

@@ -118,24 +118,47 @@ export class PineColor {
         // Handle hexadecimal colors
         if (color.startsWith('#')) {
             const hex = color.slice(1);
+            // Strip existing alpha if present (#RRGGBBAA → #RRGGBB) before appending new alpha
+            const hexRgb = hex.length === 8 ? hex.slice(0, 6) : hex;
             return a != null
-                ? `#${hex}${Math.round((255 / 100) * (100 - a))
+                ? `#${hexRgb}${Math.round((255 / 100) * (100 - a))
                       .toString(16)
                       .padStart(2, '0')
                       .toUpperCase()}`
                 : `#${hex}`;
         } else {
             const hex = COLOR_CONSTANTS[color];
-            return hex
-                ? a != null
+            if (hex) {
+                return a != null
                     ? `#${hex.slice(1)}${Math.round((255 / 100) * (100 - a))
                           .toString(16)
                           .padStart(2, '0')
                           .toUpperCase()}`
-                    : hex
-                : a != null
-                  ? `rgba(${color}, ${(100 - a) / 100})`
-                  : color;
+                    : hex;
+            }
+
+            // Handle rgb(r,g,b) and rgba(r,g,b,a) strings — extract components
+            // to avoid invalid nested formats like "rgba(rgb(207,23,23), 0.3)"
+            const rgbMatch = color.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/);
+            if (rgbMatch) {
+                const r = rgbMatch[1];
+                const g = rgbMatch[2];
+                const b = rgbMatch[3];
+                if (a != null) {
+                    // Convert to #RRGGBBAA hex for consistency with hex path
+                    const rh = parseInt(r).toString(16).padStart(2, '0');
+                    const gh = parseInt(g).toString(16).padStart(2, '0');
+                    const bh = parseInt(b).toString(16).padStart(2, '0');
+                    const ah = Math.round((255 / 100) * (100 - a)).toString(16).padStart(2, '0').toUpperCase();
+                    return `#${rh}${gh}${bh}${ah}`;
+                }
+                return color; // no alpha change, return as-is
+            }
+
+            // Fallback for unknown format
+            return a != null
+                ? `rgba(${color}, ${(100 - a) / 100})`
+                : color;
         }
     }
 
