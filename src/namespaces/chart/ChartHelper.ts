@@ -45,7 +45,7 @@ export class ChartHelper {
     }
 
     fg_color(): string {
-        return '#ffffff';
+        return '#d1d4dc';
     }
 
     is_standard(): boolean {
