@@ -4,6 +4,7 @@ import { PineArrayObject, PineArrayType } from '../PineArrayObject';
 
 export function new_string(context: any) {
     return (size: number = 0, initial_value: string = ''): PineArrayObject => {
-        return new PineArrayObject(Array(size).fill(initial_value), PineArrayType.string, context);
+        const safeSize = (typeof size === 'number' && size > 0 && !isNaN(size)) ? Math.floor(size) : 0;
+        return new PineArrayObject(Array(safeSize).fill(initial_value), PineArrayType.string, context);
     };
 }

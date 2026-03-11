@@ -489,8 +489,8 @@ plot(size)
         const result = transpile(code);
         const jsCode = result.toString();
 
-        expect(jsCode).toContain('.push(');
-        expect(jsCode).toContain('.size()');
+        expect(jsCode).toContain('?.push?.(');
+        expect(jsCode).toContain('?.size?.()');
     });
 });
 

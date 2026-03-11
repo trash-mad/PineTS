@@ -91,10 +91,6 @@ export class PolylineHelper {
         let line_width: any = 1;
         let force_overlay: any = false;
 
-        const isOptionsObj = (v: any) => v && typeof v === 'object' && !Array.isArray(v)
-            && ('points' in v || 'curved' in v || 'closed' in v || 'line_color' in v
-                || 'fill_color' in v || 'line_style' in v || 'line_width' in v);
-
         const applyOpts = (opts: any) => {
             curved = opts.curved ?? curved;
             closed = opts.closed ?? closed;
@@ -106,25 +102,40 @@ export class PolylineHelper {
             force_overlay = opts.force_overlay ?? force_overlay;
         };
 
-        if (args.length === 1 && isOptionsObj(args[0]) && 'points' in args[0]) {
+        // Detect trailing named-options object.
+        // The transpiler places named arguments as a plain object at the end:
+        //   polyline.new(pts, false, true, { line_color: '#00E676' })
+        // Must distinguish from Series, ChartPointObject, PineArrayObject, etc.
+        const lastArg = args.length >= 1 ? args[args.length - 1] : null;
+        const isTrailingOpts = args.length >= 2
+            && lastArg && typeof lastArg === 'object'
+            && !Array.isArray(lastArg)
+            && !(lastArg instanceof Series)
+            && !(lastArg instanceof ChartPointObject);
+
+        if (args.length === 1 && lastArg && typeof lastArg === 'object'
+            && !Array.isArray(lastArg) && 'points' in lastArg) {
             // Single options object with all named params including 'points'
-            points = args[0].points;
-            applyOpts(args[0]);
-        } else if (args.length === 2 && args[1] && typeof args[1] === 'object' && !Array.isArray(args[1]) && isOptionsObj(args[1])) {
-            // Points as first arg, options object as second
-            points = args[0];
-            applyOpts(args[1]);
+            points = lastArg.points;
+            applyOpts(lastArg);
         } else {
-            // Positional arguments
-            points = args[0];
-            curved = args[1] ?? curved;
-            closed = args[2] ?? closed;
-            xloc = args[3] ?? xloc;
-            line_color = args[4] ?? line_color;
-            fill_color = args[5] ?? fill_color;
-            line_style = args[6] ?? line_style;
-            line_width = args[7] ?? line_width;
-            force_overlay = args[8] ?? force_overlay;
+            // Split into positional args + optional trailing options object
+            const positional = isTrailingOpts ? args.slice(0, -1) : args;
+
+            points = positional[0];
+            curved = positional[1] ?? curved;
+            closed = positional[2] ?? closed;
+            xloc = positional[3] ?? xloc;
+            line_color = positional[4] ?? line_color;
+            fill_color = positional[5] ?? fill_color;
+            line_style = positional[6] ?? line_style;
+            line_width = positional[7] ?? line_width;
+            force_overlay = positional[8] ?? force_overlay;
+
+            // Named opts override positional args
+            if (isTrailingOpts) {
+                applyOpts(lastArg);
+            }
         }
 
         const resolvedPoints = this._extractPoints(points);

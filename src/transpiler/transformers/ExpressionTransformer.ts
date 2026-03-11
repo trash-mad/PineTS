@@ -1106,18 +1106,21 @@ export function transformFunctionArgument(arg: any, namespace: string, scopeMana
 /** Check if a $.get() call exists anywhere in a MemberExpression/CallExpression chain */
 function hasGetCallInChain(node: any): boolean {
     if (!node) return false;
-    if (node.type === 'CallExpression' &&
-        node.callee?.type === 'MemberExpression' &&
-        node.callee.object?.name === '$' &&
-        node.callee.property?.name === 'get') {
-        return true;
-    }
+    if (isDirectGetCall(node)) return true;
     if (node.type === 'MemberExpression') return hasGetCallInChain(node.object);
     // Traverse through intermediate CallExpression nodes (e.g. aEW.get(0).b5.method())
     if (node.type === 'CallExpression' && node.callee?.type === 'MemberExpression') {
         return hasGetCallInChain(node.callee.object);
     }
     return false;
+}
+
+/** Check if a node is directly a $.get(...) call (not nested in a chain) */
+function isDirectGetCall(node: any): boolean {
+    return node?.type === 'CallExpression' &&
+        node.callee?.type === 'MemberExpression' &&
+        node.callee.object?.name === '$' &&
+        node.callee.property?.name === 'get';
 }
 
 /**
@@ -1470,15 +1473,41 @@ export function transformCallExpression(node: any, scopeManager: ScopeManager, n
         );
     });
 
-    // Optional chaining for method calls through $.get() field chains.
-    // Prevents crash when UDT drawing fields (box/line/label) are na (undefined).
-    // $.get(X, N).field.method() → $.get(X, N).field?.method()
+    // ---------------------------------------------------------------------------
+    // Optional chaining for method calls on values retrieved via $.get().
+    //
+    // In Pine Script, calling methods on `na` (e.g. `na.delete()`, `na.set_x1()`)
+    // is a silent no-op. At runtime, `na` is represented as NaN. Since NaN is not
+    // null/undefined, single optional chaining (`NaN?.method()`) still crashes
+    // because `NaN.method` evaluates to `undefined`, then `undefined()` throws.
+    // Double optional chaining (`NaN?.method?.()`) is needed:
+    //   NaN?.method  → undefined  (NaN is not nullish, so .method is accessed → undefined)
+    //   undefined?.() → undefined (short-circuits, no crash)
+    //
+    // Two cases are handled:
+    //
+    // 1) Direct: $.get(X, N).method()  →  $.get(X, N)?.method?.()
+    //    Occurs when a `var` drawing variable is initialized to `na`:
+    //      var polyline profilePoly = na   →  $.initVar($.var.glb1_profilePoly, NaN)
+    //      profilePoly.delete()            →  $.get($.var.glb1_profilePoly, 0).delete()
+    //    $.get() returns NaN, and .delete() on NaN throws without optional chaining.
+    //
+    // 2) Chained: $.get(X, N).field.method()  →  $.get(X, N).field?.method?.()
+    //    Occurs when a UDT drawing field is `na`:
+    //      myUDT.boxField.delete()  →  $.get(udt, 0).boxField.delete()
+    //    The field resolves to NaN, same issue.
+    //
     // NOTE: This must run AFTER argument transformation so that the callee is
     // still a MemberExpression when argument type checks inspect it.
-    if (node.callee && node.callee.type === 'MemberExpression' &&
-        node.callee.object?.type === 'MemberExpression' &&
-        hasGetCallInChain(node.callee.object)) {
+    // ---------------------------------------------------------------------------
+    if (node.callee && node.callee.type === 'MemberExpression' && hasGetCallInChain(node.callee)) {
+        // Double optional chaining: obj?.method?.()
+        // The node stays as a CallExpression (safe for AST walkers) but gets:
+        //   1. optional: true on the CallExpression  → produces ?.()
+        //   2. optional: true on the MemberExpression → produces ?.method
+        //   3. callee wrapped in ChainExpression      → groups the chain for astring
         const innerCallee = Object.assign({}, node.callee, { optional: true });
         node.callee = { type: 'ChainExpression', expression: innerCallee };
+        node.optional = true;
     }
 }

@@ -142,6 +142,14 @@ export const ASTFactory = {
         return this.createCallExpression(eqMethod, [left, right]);
     },
 
+    // Create $.pine.math.__neq(left, right)
+    createMathNeqCall(left: any, right: any): any {
+        const pineObj = this.createMemberExpression(this.createContextIdentifier(), this.createIdentifier('pine'), false);
+        const mathObj = this.createMemberExpression(pineObj, this.createIdentifier('math'), false);
+        const neqMethod = this.createMemberExpression(mathObj, this.createIdentifier('__neq'), false);
+        return this.createCallExpression(neqMethod, [left, right]);
+    },
+
     createWrapperFunction(body: any): any {
         return {
             type: 'FunctionDeclaration',

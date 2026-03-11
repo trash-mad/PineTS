@@ -165,16 +165,20 @@ export function transformEqualityChecks(ast: any): void {
         ast,
         {
             BinaryExpression(node: any) {
-                // Check if this is an equality operator
+                // Transform equality/inequality operators to na-aware versions.
+                // In Pine Script, any comparison with na returns false:
+                //   na == na → false,  na != na → false
+                //   1 == na  → false,  1 != na  → false
+                // JavaScript's != treats NaN specially (NaN != x is always true),
+                // so we route through math.__eq / math.__neq which check for NaN
+                // and return false when either operand is na.
                 if (node.operator === '==' || node.operator === '===') {
-                    // Store the original operands
-                    const leftOperand = node.left;
-                    const rightOperand = node.right;
-
-                    // Transform the BinaryExpression into a CallExpression
-                    const callExpr = ASTFactory.createMathEqCall(leftOperand, rightOperand);
+                    const callExpr = ASTFactory.createMathEqCall(node.left, node.right);
                     callExpr._transformed = true;
-
+                    Object.assign(node, callExpr);
+                } else if (node.operator === '!=' || node.operator === '!==') {
+                    const callExpr = ASTFactory.createMathNeqCall(node.left, node.right);
+                    callExpr._transformed = true;
                     Object.assign(node, callExpr);
                 }
             },

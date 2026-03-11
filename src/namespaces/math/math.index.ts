@@ -33,6 +33,7 @@ import { tan } from './methods/tan';
 import { todegrees } from './methods/todegrees';
 import { toradians } from './methods/toradians';
 import { __eq } from './methods/__eq';
+import { __neq } from './methods/__neq';
 
 const methods = {
   abs,
@@ -65,7 +66,8 @@ const methods = {
   tan,
   todegrees,
   toradians,
-  __eq
+  __eq,
+  __neq
 };
 
 export class PineMath {
@@ -101,6 +103,7 @@ export class PineMath {
   todegrees: ReturnType<typeof methods.todegrees>;
   toradians: ReturnType<typeof methods.toradians>;
   __eq: ReturnType<typeof methods.__eq>;
+  __neq: ReturnType<typeof methods.__neq>;
 
   constructor(private context: any) {
     // Install methods

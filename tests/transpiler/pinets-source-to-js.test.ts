@@ -1045,9 +1045,9 @@ let src_open = input.any({ title: 'Open Source', defval: open });
   const p0 = array.param(5, undefined, 'p0');
   const temp_1 = array.new_float(p0);
   $.let.glb1_a = $.init($.let.glb1_a, temp_1);
-  $.get($.let.glb1_a, 0).fill($.get(close, 1) - $.get(open, 0));
+  $.get($.let.glb1_a, 0)?.fill?.($.get(close, 1) - $.get(open, 0));
   $.let.glb1_res = $.init($.let.glb1_res, $.get($.let.glb1_a, 0));
-  $.let.glb1_i = $.init($.let.glb1_i, $.get($.let.glb1_a, 0).indexof($.get(high, 0)));
+  $.let.glb1_i = $.init($.let.glb1_i, $.get($.let.glb1_a, 0)?.indexof?.($.get(high, 0)));
 }`;
 
         expect(result).toBe(expected_code);
@@ -1246,8 +1246,8 @@ let src_open = input.any({ title: 'Open Source', defval: open });
     active: "bool"
   }, undefined, 'p0');
   $.const.glb1_Trade = $.init($.const.glb1_Trade, Type(p0));
-  $.let.glb1_trade = $.init($.let.glb1_trade, $.get($.const.glb1_Trade, 0).new($.get(close, 0), $.get(open, 0), $.get(high, 0), $.get(close, 0) > $.get(open, 0)));
-  $.let.glb1_trade2 = $.init($.let.glb1_trade2, $.get($.let.glb1_trade, 0).copy());
+  $.let.glb1_trade = $.init($.let.glb1_trade, $.get($.const.glb1_Trade, 0)?.new?.($.get(close, 0), $.get(open, 0), $.get(high, 0), $.get(close, 0) > $.get(open, 0)));
+  $.let.glb1_trade2 = $.init($.let.glb1_trade2, $.get($.let.glb1_trade, 0)?.copy?.());
   $.get($.let.glb1_trade2, 0).active = false;
   const p1 = ta.param($.get($.let.glb1_trade, 0).entry, undefined, 'p1');
   const p2 = ta.param(14, undefined, 'p2');
@@ -1338,8 +1338,9 @@ let src_open = input.any({ title: 'Open Source', defval: open });
         const result = transpiled.toString().trim();
 
         // All three usages should transform variables consistently
+        // != is now transpiled to $.pine.math.__neq() for na-aware inequality
         const expectedPattern =
-            /\$\.get\(\$\.let\.glb1_buy, 0\) && \$\.get\(\$\.let\.glb1_xs, 0\) != \$\.get\(\$\.let\.glb1_xs, 1\) && \$\.get\(\$\.let\.glb1_direction, 0\) < 0/g;
+            /\$\.get\(\$\.let\.glb1_buy, 0\) && \$\.pine\.math\.__neq\(\$\.get\(\$\.let\.glb1_xs, 0\), \$\.get\(\$\.let\.glb1_xs, 1\)\) && \$\.get\(\$\.let\.glb1_direction, 0\) < 0/g;
         const matches = result.match(expectedPattern);
 
         // Should appear 3 times: in plotshape arg, foo arg, and buyCond assignment
