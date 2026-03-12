@@ -1,5 +1,23 @@
 # Change Log
 
+## [0.9.5] - 2026-03-12 - Time & Timezone Fixes
+
+### Added
+
+- **`PineTS.setTimezone(timezone)`**: Display-only chart timezone (like TradingView's timezone picker). Accepts IANA names, `UTC±N` offsets, or `'UTC'`. Only affects `log.*` timestamp formatting — computation functions (`timestamp()`, `hour`, `dayofmonth`, `time_tradingday`, etc.) always use the exchange timezone from `syminfo.timezone`.
+
+### Fixed
+
+- **`closeTime` Normalization**: `BinanceProvider` and `MockProvider` now normalize `closeTime` to the TradingView convention (`closeTime = nextBar.openTime`) instead of Binance's raw `nextBarOpen - 1ms`. `IProvider` docs updated to specify this convention. For array-based data missing `closeTime`, `PineTS` now estimates it as `openTime + timeframe duration` (falls back to 1D when unknown).
+- **`time_tradingday` Uses Close Date**: Was returning midnight UTC of the bar's open date. Now correctly returns midnight UTC of the **close date** (matching TradingView). E.g. a weekly bar opening `2019-01-07` → closes `2019-01-14` → `time_tradingday = 2019-01-14 00:00 UTC`.
+- **`timestamp(dateString)` Exchange Timezone**: Date strings like `"2019-06-10 00:00"` were parsed in the host system's local timezone. Now explicitly resolved in the exchange timezone (`syminfo.timezone`), matching TradingView behaviour. Strings with explicit offsets or `Z` are honoured as-is.
+- **`TimeHelper` as `Series`** ([#156](https://github.com/QuantForgeOrg/PineTS/issues/156)): `Series.from()` now unwraps NAMESPACES_LIKE dual-use objects (`time`, `time_close`, etc.) by detecting the `.__value` Series property, instead of wrapping the object itself. Added a null-guard to prevent a crash when the source is `null`. (contribution by [@dcaoyuan](https://github.com/dcaoyuan))
+- **`Log` Timestamps Use Chart Timezone**: `log.info/warning/error` hardcoded UTC for bar timestamp prefixes. They now respect the timezone set via `setTimezone()`, falling back to the exchange timezone.
+- **`Etc/UTC` Alias**: Added `'Etc/UTC'` to the fast-path UTC check in `getDatePartsInTimezone()`, fixing date-part calculations for providers that use the canonical `Etc/UTC` identifier (common for crypto).
+- **`ta.vwap` Session Timezone**: VWAP day-boundary detection now uses `getDatePartsInTimezone(openTime, syminfo.timezone)` instead of `toISOString().slice(0, 10)`, so session resets are correct for non-UTC exchanges.
+
+---
+
 ## [0.9.4] - 2026-03-11 - Color Namespace, Transpiler Overhaul, request.security & Drawing Improvements
 
 ### Added
