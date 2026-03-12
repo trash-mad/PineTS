@@ -213,6 +213,9 @@ export class Core {
                 );
             }
             // Fallback for other formats (RFC 2822, etc.)
+            // RFC 2822 strings always include a timezone offset (e.g. "+0000"),
+            // so they are normally caught by the explicit-TZ check above.
+            // Any remaining string that reaches here is non-standard; parse as-is.
             return new Date(ds).getTime();
         }
 
@@ -240,7 +243,7 @@ export class Core {
 
         // For plain UTC, return directly
         const tzNorm = timezone.trim();
-        if (tzNorm === 'UTC' || tzNorm === 'GMT') {
+        if (tzNorm === 'UTC' || tzNorm === 'GMT' || tzNorm === 'Etc/UTC') {
             return utcDate.getTime();
         }
 
