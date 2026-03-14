@@ -4,10 +4,18 @@ import { PineMatrixObject } from '../PineMatrixObject';
 import { Context } from '../../../Context.class';
 import { PineArrayObject } from '../../array/PineArrayObject';
 import { inferValueType } from '@pinets/namespaces/array/utils';
+import { PineRuntimeError } from '../../../errors/PineRuntimeError';
 
 export function col(context: Context) {
     return (id: PineMatrixObject, column: number) => {
         const rows = id.matrix.length;
+        const cols = rows > 0 ? id.matrix[0].length : 0;
+        if (column < 0 || column >= cols) {
+            throw new PineRuntimeError(
+                `Column index ${column} is out of bounds, matrix has ${cols} columns.`,
+                'matrix.col'
+            );
+        }
         const result = [];
         for (let i = 0; i < rows; i++) {
             result.push(id.matrix[i][column]);

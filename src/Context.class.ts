@@ -49,6 +49,7 @@ export class Context {
     public chartTimezone: string | null = null; // Chart display timezone (affects log timestamps only, not computation)
     public dataVersion: number = 0; // Incremented when market data changes (streaming mode)
 
+    public __maxLoops: number = 500000;
     public NA: any = NaN;
 
     public lang: any;
@@ -703,7 +704,7 @@ export class Context {
      */
     set(target: any, value: any) {
         if (target instanceof Series) {
-            target.set(0, value);
+            target.set(0, typeof value === 'number' ? this.precision(value) : value);
             return;
         }
 

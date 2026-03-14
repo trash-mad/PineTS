@@ -5,6 +5,7 @@ import PineTS from './PineTS.class';
 import { Context } from './Context.class';
 import { Provider } from './marketData/Provider.class';
 import { Indicator } from './Indicator';
+import { PineRuntimeError } from './errors/PineRuntimeError';
 
 // Provider classes for direct instantiation
 export { BaseProvider } from './marketData/BaseProvider';
@@ -18,4 +19,4 @@ export type { Kline, PeriodType } from './marketData/types';
 export { computeNextPeriodStart, localTimeToUTC, computeSessionClose, TIMEFRAME_SECONDS, TIMEFRAME_PERIOD_INFO } from './marketData/types';
 export { aggregateCandles, selectSubTimeframe, getAggregationRatio } from './marketData/aggregation';
 
-export { PineTS, Context, Provider, Indicator };
+export { PineTS, Context, Provider, Indicator, PineRuntimeError };

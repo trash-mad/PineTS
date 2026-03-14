@@ -130,6 +130,35 @@ export function transpile(source: string | Function, options: { debug: boolean; 
     // and their callers (via $.call) must await them.
     propagateAsyncAwait(ast);
 
+    // Post-process: inject __maxLoops local variable at the top of the function body.
+    // This caches $.__maxLoops (from Context) in a local variable so loop guards
+    // don't access the context object on every iteration. Falls back to 500000.
+    if (ast.type === 'Program' && ast.body.length > 0) {
+        const firstStmt = ast.body[0] as any;
+        const fn = firstStmt?.expression || firstStmt;
+        if (fn.body?.type === 'BlockStatement') {
+            fn.body.body.unshift({
+                type: 'VariableDeclaration',
+                kind: 'const',
+                declarations: [{
+                    type: 'VariableDeclarator',
+                    id: { type: 'Identifier', name: '__maxLoops' },
+                    init: {
+                        type: 'LogicalExpression',
+                        operator: '||',
+                        left: {
+                            type: 'MemberExpression',
+                            object: { type: 'Identifier', name: '$' },
+                            property: { type: 'Identifier', name: '__maxLoops' },
+                            computed: false,
+                        },
+                        right: { type: 'Literal', value: 500000 },
+                    },
+                }],
+            });
+        }
+    }
+
     // Generate final code
     // astring exports baseGenerator (camelCase) in this version/build
     const baseGenerator = astring.baseGenerator || astring.GENERATOR || ((astring as any).default && (astring as any).default.BASE_GENERATOR);

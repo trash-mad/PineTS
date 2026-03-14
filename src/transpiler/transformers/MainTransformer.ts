@@ -13,6 +13,7 @@ import {
     transformWhileStatement,
     transformIfStatement,
     transformFunctionDeclaration,
+    createLoopGuardNodes,
 } from './StatementTransformer';
 
 /**
@@ -363,9 +364,19 @@ export function runTransformationPass(
             } else if (node.right) {
                 c(node.right, state);
             }
+            // Inject loop guard: hoist counter declaration before the loop
+            const forOfGuardName = state.getNextLoopGuardName();
+            const forOfGuard = createLoopGuardNodes(forOfGuardName);
+            state.addHoistedStatement(forOfGuard.counterDecl);
+
             // Traverse the body
             if (node.body) {
                 c(node.body, state);
+            }
+
+            // Prepend guard check as the first statement in the loop body
+            if (node.body && node.body.type === 'BlockStatement') {
+                node.body.body.unshift(forOfGuard.guardCheck);
             }
 
             // Clean up loop variables so they don't leak to outer scope
