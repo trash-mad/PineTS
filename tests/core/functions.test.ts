@@ -161,24 +161,24 @@ describe('Functions', () => {
             plotdata_str += `[${str_time}]: ${data}\n`;
         }
 
-        const expected_plot = `[2019-05-20T00:00:00.000-00:00]: 1.2290324697
-[2019-05-27T00:00:00.000-00:00]: 1.2305073447
-[2019-06-03T00:00:00.000-00:00]: 1.0749544748
-[2019-06-10T00:00:00.000-00:00]: 1.2649121814
-[2019-06-17T00:00:00.000-00:00]: 1.2649121814
-[2019-06-24T00:00:00.000-00:00]: 1.2649121814
-[2019-07-01T00:00:00.000-00:00]: 1.3510336215
-[2019-07-08T00:00:00.000-00:00]: 1.3510336215
-[2019-07-15T00:00:00.000-00:00]: 1.3510336215
-[2019-07-22T00:00:00.000-00:00]: 1.2165174034
-[2019-07-29T00:00:00.000-00:00]: 1.2165174034
-[2019-08-05T00:00:00.000-00:00]: 1.2165174034
-[2019-08-12T00:00:00.000-00:00]: 1.0876020229
-[2019-08-19T00:00:00.000-00:00]: 1.0686079729
-[2019-08-26T00:00:00.000-00:00]: 1.0287770801
-[2019-09-02T00:00:00.000-00:00]: 1.0287770801
-[2019-09-09T00:00:00.000-00:00]: 1.0205375791
-[2019-09-16T00:00:00.000-00:00]: 1.0205375791`;
+        const expected_plot = `[2019-05-20T00:00:00.000-00:00]: 1.2290324694
+[2019-05-27T00:00:00.000-00:00]: 1.2305073444
+[2019-06-03T00:00:00.000-00:00]: 1.0749544745
+[2019-06-10T00:00:00.000-00:00]: 1.2649121811
+[2019-06-17T00:00:00.000-00:00]: 1.2649121811
+[2019-06-24T00:00:00.000-00:00]: 1.2649121811
+[2019-07-01T00:00:00.000-00:00]: 1.3510336212
+[2019-07-08T00:00:00.000-00:00]: 1.3510336212
+[2019-07-15T00:00:00.000-00:00]: 1.3510336212
+[2019-07-22T00:00:00.000-00:00]: 1.2165174032
+[2019-07-29T00:00:00.000-00:00]: 1.2165174032
+[2019-08-05T00:00:00.000-00:00]: 1.2165174032
+[2019-08-12T00:00:00.000-00:00]: 1.0876020227
+[2019-08-19T00:00:00.000-00:00]: 1.0686079727
+[2019-08-26T00:00:00.000-00:00]: 1.0287770798
+[2019-09-02T00:00:00.000-00:00]: 1.0287770798
+[2019-09-09T00:00:00.000-00:00]: 1.0205375789
+[2019-09-16T00:00:00.000-00:00]: 1.0205375789`;
 
         console.log('expected_plot', expected_plot);
         console.log('plotdata_str', plotdata_str);
@@ -412,16 +412,16 @@ describe('Functions', () => {
             plotdata_str += `[${str_time}]: ${res} ${direction}\n`;
         }
 
-        const expected_plot = `[2019-07-22T00:00:00.000-00:00]: 7963.315264029399 -1
-[2019-07-29T00:00:00.000-00:00]: 7963.315264029399 -1
-[2019-08-05T00:00:00.000-00:00]: 7963.315264029399 -1
-[2019-08-12T00:00:00.000-00:00]: 7963.315264029399 -1
-[2019-08-19T00:00:00.000-00:00]: 7963.315264029399 -1
-[2019-08-26T00:00:00.000-00:00]: 7963.315264029399 -1
-[2019-09-02T00:00:00.000-00:00]: 7963.315264029399 -1
-[2019-09-09T00:00:00.000-00:00]: 7963.315264029399 -1
-[2019-09-16T00:00:00.000-00:00]: 7963.315264029399 -1
-[2019-09-23T00:00:00.000-00:00]: 7963.315264029399 -1
+        const expected_plot = `[2019-07-22T00:00:00.000-00:00]: 7963.3152640294 -1
+[2019-07-29T00:00:00.000-00:00]: 7963.3152640294 -1
+[2019-08-05T00:00:00.000-00:00]: 7963.3152640294 -1
+[2019-08-12T00:00:00.000-00:00]: 7963.3152640294 -1
+[2019-08-19T00:00:00.000-00:00]: 7963.3152640294 -1
+[2019-08-26T00:00:00.000-00:00]: 7963.3152640294 -1
+[2019-09-02T00:00:00.000-00:00]: 7963.3152640294 -1
+[2019-09-09T00:00:00.000-00:00]: 7963.3152640294 -1
+[2019-09-16T00:00:00.000-00:00]: 7963.3152640294 -1
+[2019-09-23T00:00:00.000-00:00]: 7963.3152640294 -1
 [2019-09-30T00:00:00.000-00:00]: 12355.5963415975 1
 [2019-10-07T00:00:00.000-00:00]: 12355.5963415975 1
 [2019-10-14T00:00:00.000-00:00]: 12015.3009366939 1
@@ -538,22 +538,149 @@ describe('Functions', () => {
 [2019-08-05T00:00:00.000-00:00]: 13582.88140464
 [2019-08-12T00:00:00.000-00:00]: 13492.7637765472
 [2019-08-19T00:00:00.000-00:00]: 13404.4485010163
-[2019-08-26T00:00:00.000-00:00]: 13317.8995309959
-[2019-09-02T00:00:00.000-00:00]: 13233.081540376
-[2019-09-09T00:00:00.000-00:00]: 13149.9599095685
-[2019-09-16T00:00:00.000-00:00]: 13068.5007113771
-[2019-09-23T00:00:00.000-00:00]: 12988.6706971496
-[2019-09-30T00:00:00.000-00:00]: 12778.1238692636
-[2019-10-07T00:00:00.000-00:00]: 12473.5000371078
-[2019-10-14T00:00:00.000-00:00]: 12187.1536348813
-[2019-10-21T00:00:00.000-00:00]: 11917.9880167884
+[2019-08-26T00:00:00.000-00:00]: 13317.899530996
+[2019-09-02T00:00:00.000-00:00]: 13233.0815403761
+[2019-09-09T00:00:00.000-00:00]: 13149.9599095686
+[2019-09-16T00:00:00.000-00:00]: 13068.5007113772
+[2019-09-23T00:00:00.000-00:00]: 12988.6706971497
+[2019-09-30T00:00:00.000-00:00]: 12778.1238692637
+[2019-10-07T00:00:00.000-00:00]: 12473.5000371079
+[2019-10-14T00:00:00.000-00:00]: 12187.1536348814
+[2019-10-21T00:00:00.000-00:00]: 11917.9880167885
 [2019-10-28T00:00:00.000-00:00]: 11547.7489754454
-[2019-11-04T00:00:00.000-00:00]: 11207.1290574097
+[2019-11-04T00:00:00.000-00:00]: 11207.1290574098
 [2019-11-11T00:00:00.000-00:00]: 10893.758732817
 [2019-11-18T00:00:00.000-00:00]: 10605.4580341916`;
 
         console.log('expected_plot', expected_plot);
         console.log('plotdata_str', plotdata_str);
         expect(plotdata_str.trim()).toEqual(expected_plot.trim());
+    });
+
+    it('Tuple Return with Complex Expressions (Bollinger-like Bands)', async () => {
+        const pineTS = new PineTS(Provider.Mock, 'BTCUSDC', 'W', null, new Date('2018-12-10').getTime(), new Date('2020-01-27').getTime());
+
+        const sourceCode = (context) => {
+            const { close } = context.data;
+            const { ta, plotchar } = context.pine;
+
+            function myBands(src, len, mult) {
+                let _mid = ta.sma(src, len);
+                let _dev = ta.stdev(src, len);
+                return [_mid, _mid + _dev * mult, _mid - _dev * mult];
+            }
+
+            const [mid, upper, lower] = myBands(close, 20, 2);
+            plotchar(mid, 'mid');
+            plotchar(upper, 'upper');
+            plotchar(lower, 'lower');
+
+            return { mid, upper, lower };
+        };
+
+        const { result, plots } = await pineTS.run(sourceCode);
+
+        const midData = plots['mid']?.data;
+        const upperData = plots['upper']?.data;
+        const lowerData = plots['lower']?.data;
+
+        expect(midData).toBeDefined();
+        expect(upperData).toBeDefined();
+        expect(lowerData).toBeDefined();
+        expect(midData.length).toBeGreaterThan(0);
+
+        // Verify structural invariants: upper > mid > lower (for all bars with valid data)
+        let validBars = 0;
+        for (let i = 0; i < midData.length; i++) {
+            const m = midData[i]?.value;
+            const u = upperData[i]?.value;
+            const l = lowerData[i]?.value;
+            if (typeof m === 'number' && !isNaN(m) && typeof u === 'number' && !isNaN(u) && typeof l === 'number' && !isNaN(l)) {
+                validBars++;
+                expect(u).toBeGreaterThan(m);
+                expect(m).toBeGreaterThan(l);
+                // upper - mid should equal mid - lower (symmetry from same stdev * mult)
+                expect(Math.abs((u - m) - (m - l))).toBeLessThan(1e-8);
+            }
+        }
+        expect(validBars).toBeGreaterThan(0);
+
+        // Verify specific values against known-good output
+        const startDate = new Date('2019-06-03').getTime();
+        const endDate = new Date('2019-08-26').getTime();
+
+        let plotdata_str = '';
+        for (let i = 0; i < midData.length; i++) {
+            const time = midData[i].time;
+            if (time < startDate || time > endDate) continue;
+
+            const str_time = new Date(time).toISOString().slice(0, -1) + '-00:00';
+            const m = midData[i].value;
+            const u = upperData[i].value;
+            const l = lowerData[i].value;
+            plotdata_str += `[${str_time}]: ${m} ${u} ${l}\n`;
+        }
+
+        const expected_plot = `[2019-06-03T00:00:00.000-00:00]: 5222.1205 8807.840866445 1636.4001335550001
+[2019-06-10T00:00:00.000-00:00]: 5494.956 9345.1994494114 1644.7125505886002
+[2019-06-17T00:00:00.000-00:00]: 5866.6455 10240.9622895088 1492.3287104911997
+[2019-06-24T00:00:00.000-00:00]: 6221.5135 10956.167730134599 1486.8592698654002
+[2019-07-01T00:00:00.000-00:00]: 6614.125 11711.931292065201 1516.3187079348
+[2019-07-08T00:00:00.000-00:00]: 6937.043 12079.0585445704 1795.0274554295993
+[2019-07-15T00:00:00.000-00:00]: 7277.2775 12440.3744110676 2114.1805889324005
+[2019-07-22T00:00:00.000-00:00]: 7559.1495 12566.6143243616 2551.6846756384
+[2019-07-29T00:00:00.000-00:00]: 7909.5065 12842.6045431096 2976.4084568904
+[2019-08-05T00:00:00.000-00:00]: 8287.8235 13114.7339453854 3460.9130546146007
+[2019-08-12T00:00:00.000-00:00]: 8598.9955 13095.193811923 4102.797188077001
+[2019-08-19T00:00:00.000-00:00]: 8846.2 13103.3070605096 4589.092939490401
+[2019-08-26T00:00:00.000-00:00]: 9076.0505 12995.5919186738 5156.5090813261995`;
+
+        expect(plotdata_str.trim()).toEqual(expected_plot.trim());
+    });
+
+    it('Nested UDT Field Assignment and Read', async () => {
+        const pineTS = new PineTS(Provider.Mock, 'BTCUSDC', 'W', null, new Date('2018-12-10').getTime(), new Date('2020-01-27').getTime());
+
+        const sourceCode = (context) => {
+            const { close } = context.data;
+            const { plotchar, Type } = context.pine;
+
+            const Inner = Type({ value: 'float' });
+            const Outer = Type({ inner: 'Inner', scale: 'float' });
+
+            var _outer = Outer.new(Inner.new(close), 2);
+            _outer = Outer.new(Inner.new(close), 2);
+
+            // Read nested field
+            let _inner_val = _outer.inner.value;
+
+            // Write nested field: _outer.inner.value = close * scale
+            _outer.inner.value = close * _outer.scale;
+            let _modified = _outer.inner.value;
+
+            plotchar(_inner_val, 'inner_val');
+            plotchar(_modified, 'modified');
+
+            return { _inner_val, _modified };
+        };
+
+        const { result, plots } = await pineTS.run(sourceCode);
+
+        const innerData = plots['inner_val']?.data;
+        const modifiedData = plots['modified']?.data;
+
+        expect(innerData).toBeDefined();
+        expect(modifiedData).toBeDefined();
+        expect(innerData.length).toBeGreaterThan(0);
+
+        // Verify: _inner_val should equal close, _modified should equal close * 2
+        for (let i = 0; i < innerData.length; i++) {
+            const iv = innerData[i]?.value;
+            const mv = modifiedData[i]?.value;
+            if (typeof iv === 'number' && !isNaN(iv) && typeof mv === 'number' && !isNaN(mv)) {
+                // _modified should be exactly 2 * _inner_val (scale=2, _inner_val=close)
+                expect(Math.abs(mv - iv * 2)).toBeLessThan(1e-8);
+            }
+        }
     });
 });

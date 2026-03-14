@@ -57,6 +57,7 @@ export class ScopeManager {
     private taCallIdCounter: number = 0;
     private userCallIdCounter: number = 0;
     private plotCallIdCounter: number = 0;
+    private loopGuardCounter: number = 0;
     private hoistingStack: any[][] = [];
     private suppressHoisting: boolean = false;
     private reservedNames: Set<string> = new Set();
@@ -97,6 +98,10 @@ export class ScopeManager {
             value: `#${this.plotCallIdCounter++}`,
         };
     }
+    public getNextLoopGuardName(): string {
+        return `__lg${this.loopGuardCounter++}`;
+    }
+
     constructor() {
         // Initialize global scope
         this.pushScope('glb');

@@ -15,6 +15,55 @@ import {
     createScopedVariableAccess,
 } from './ExpressionTransformer';
 
+/**
+ * Creates the AST nodes for a loop guard:
+ * 1. A counter declaration: `let __lgN = 0;` (to be hoisted before the loop)
+ * 2. A guard check: `if (++__lgN > __maxLoops) throw new Error("Loop exceeded maximum iterations (__lgN)");`
+ *    (to be prepended to the loop body)
+ */
+export function createLoopGuardNodes(guardName: string): { counterDecl: any; guardCheck: any } {
+    // let __lgN = 0;
+    const counterDecl = {
+        type: 'VariableDeclaration',
+        kind: 'let',
+        declarations: [{
+            type: 'VariableDeclarator',
+            id: { type: 'Identifier', name: guardName },
+            init: { type: 'Literal', value: 0 },
+        }],
+    };
+
+    // if (++__lgN > __maxLoops) throw new Error("Loop exceeded maximum iterations (__lgN)");
+    const guardCheck = {
+        type: 'IfStatement',
+        test: {
+            type: 'BinaryExpression',
+            operator: '>',
+            left: {
+                type: 'UpdateExpression',
+                operator: '++',
+                prefix: true,
+                argument: { type: 'Identifier', name: guardName },
+            },
+            right: { type: 'Identifier', name: '__maxLoops' },
+        },
+        consequent: {
+            type: 'ThrowStatement',
+            argument: {
+                type: 'NewExpression',
+                callee: { type: 'Identifier', name: 'Error' },
+                arguments: [{
+                    type: 'Literal',
+                    value: `Loop exceeded maximum iterations (${guardName})`,
+                }],
+            },
+        },
+        alternate: null,
+    };
+
+    return { counterDecl, guardCheck };
+}
+
 export function transformAssignmentExpression(node: any, scopeManager: ScopeManager): void {
     let targetVarRef = null;
     // Transform assignment expressions to use the context object
@@ -36,21 +85,32 @@ export function transformAssignmentExpression(node: any, scopeManager: ScopeMana
             }
         }
     } else if (node.left.type === 'MemberExpression' && !node.left.computed) {
-        // Assignment to object property: obj.property = val
-        // Transform the object identifier if it's a user variable
-        if (node.left.object.type === 'Identifier') {
-            const name = node.left.object.name;
+        // Assignment to object property: obj.property = val  OR  obj.a.b = val (nested)
+        // Walk the member expression chain to find the root Identifier and transform it
+        let rootOwner: any = null; // the node whose .object is the root Identifier
+        let cursor = node.left;
+        while (cursor.type === 'MemberExpression' && !cursor.computed) {
+            if (cursor.object.type === 'Identifier') {
+                rootOwner = cursor;
+                break;
+            }
+            cursor = cursor.object;
+        }
+
+        if (rootOwner) {
+            const name = rootOwner.object.name;
             const [varName, kind] = scopeManager.getVariable(name);
             const isRenamed = varName !== name;
 
             // Only transform if the variable has been renamed (i.e., it's a user-defined variable)
             // Context-bound variables that are NOT renamed (like 'display', 'ta', 'input') should NOT be transformed
             if (isRenamed && !scopeManager.isLoopVariable(name)) {
-                // Transform object to scoped variable reference with [0] access
-                // trade2.active = false  ->  $.get($.let.glb1_trade2, 0).active = false
+                // Transform root object to scoped variable reference with [0] access
+                // trade2.active = false       ->  $.get($.let.glb1_trade2, 0).active = false
+                // _outer.inner.value = close  ->  $.get($.var.glb1__outer, 0).inner.value = close
                 const contextVarRef = createScopedVariableReference(name, scopeManager);
                 const getCall = ASTFactory.createGetCall(contextVarRef, 0);
-                node.left.object = getCall;
+                rootOwner.object = getCall;
             }
         }
     }
@@ -805,9 +865,20 @@ export function transformForStatement(node: any, scopeManager: ScopeManager, c: 
 
     // Transform the loop body
     scopeManager.setSuppressHoisting(false);
+
+    // Inject loop guard: hoist counter declaration before the loop
+    const forGuardName = scopeManager.getNextLoopGuardName();
+    const forGuard = createLoopGuardNodes(forGuardName);
+    scopeManager.addHoistedStatement(forGuard.counterDecl);
+
     scopeManager.pushScope('for');
     c(node.body, scopeManager);
     scopeManager.popScope();
+
+    // Prepend guard check as the first statement in the loop body
+    if (node.body.type === 'BlockStatement') {
+        node.body.body.unshift(forGuard.guardCheck);
+    }
 
     // Clean up loop variable so it doesn't leak to outer scope
     // (prevents shadowing issues when the same name is reused later)
@@ -869,10 +940,20 @@ export function transformWhileStatement(node: any, scopeManager: ScopeManager, c
 
     scopeManager.setSuppressHoisting(false);
 
+    // Inject loop guard: hoist counter declaration before the loop
+    const whileGuardName = scopeManager.getNextLoopGuardName();
+    const whileGuard = createLoopGuardNodes(whileGuardName);
+    scopeManager.addHoistedStatement(whileGuard.counterDecl);
+
     // Process the body of the while loop
     scopeManager.pushScope('whl');
     c(node.body, scopeManager);
     scopeManager.popScope();
+
+    // Prepend guard check as the first statement in the loop body
+    if (node.body.type === 'BlockStatement') {
+        node.body.body.unshift(whileGuard.guardCheck);
+    }
 }
 
 export function transformExpression(node: any, scopeManager: ScopeManager): void {
@@ -971,6 +1052,40 @@ export function transformReturnStatement(node: any, scopeManager: ScopeManager):
                     }
                     // Otherwise, transform it normally
                     transformMemberExpression(element, '', scopeManager);
+                    return element;
+                } else if (
+                    element.type === 'BinaryExpression' ||
+                    element.type === 'LogicalExpression' ||
+                    element.type === 'ConditionalExpression' ||
+                    element.type === 'CallExpression' ||
+                    element.type === 'UnaryExpression'
+                ) {
+                    // Walk into complex expressions and transform identifiers/members
+                    walk.recursive(element, scopeManager, {
+                        Identifier(node: any, state: ScopeManager) {
+                            transformIdentifier(node, state);
+                            if (node.type === 'Identifier' && !node._arrayAccessed) {
+                                addArrayAccess(node, state);
+                                node._arrayAccessed = true;
+                            }
+                        },
+                        MemberExpression(node: any) {
+                            transformMemberExpression(node, '', scopeManager);
+                        },
+                        CallExpression(node: any, state: ScopeManager, c: any) {
+                            if (node.callee.type === 'ArrowFunctionExpression' || node.callee.type === 'FunctionExpression') {
+                                c(node.callee, state);
+                            }
+                            transformCallExpression(node, state);
+                            if (node.type === 'CallExpression') {
+                                node.arguments.forEach((arg: any) => c(arg, state));
+                            }
+                        },
+                        BinaryExpression(node: any, state: any, c: any) {
+                            c(node.left, state);
+                            c(node.right, state);
+                        },
+                    });
                     return element;
                 }
                 return element;
