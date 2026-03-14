@@ -2,11 +2,24 @@
 
 import { PineMatrixObject } from '../PineMatrixObject';
 import { Context } from '../../../Context.class';
+import { PineRuntimeError } from '../../../errors/PineRuntimeError';
 
 export function set(context: Context) {
     return (id: PineMatrixObject, row: number, col: number, value: any) => {
-        if (!id.matrix[row]) return;
+        const rows = id.matrix.length;
+        const cols = rows > 0 ? id.matrix[0].length : 0;
+        if (row < 0 || row >= rows) {
+            throw new PineRuntimeError(
+                `Row index ${row} is out of bounds, matrix has ${rows} rows.`,
+                'matrix.set'
+            );
+        }
+        if (col < 0 || col >= cols) {
+            throw new PineRuntimeError(
+                `Column index ${col} is out of bounds, matrix has ${cols} columns.`,
+                'matrix.set'
+            );
+        }
         id.matrix[row][col] = value;
     };
 }
-

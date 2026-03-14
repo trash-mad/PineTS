@@ -5,18 +5,19 @@
  *
  * Pine Script v6 supports negative indices for array methods:
  * -1 = last element, -array.size() = first element.
- * Indices beyond -array.size() are out of bounds.
+ * Indices beyond -array.size() are out of bounds and throw PineRuntimeError.
  */
 
 import { describe, it, expect } from 'vitest';
 import { PineTS } from '../../../src/PineTS.class';
 import { Provider } from '@pinets/marketData/Provider.class';
+import { PineRuntimeError } from '../../../src/errors/PineRuntimeError';
 
 describe('Array Negative Index (v6 semantics)', () => {
     const startDate = new Date('2024-01-01').getTime();
     const endDate = new Date('2024-01-05').getTime();
 
-    // ── array.get ──────────────────────────────────────
+    // -- array.get --
 
     describe('array.get', () => {
         it('should return last element for index -1', async () => {
@@ -56,28 +57,24 @@ describe('Array Negative Index (v6 semantics)', () => {
             expect(plots['neg4'].data[0].value).toBe(20);
         });
 
-        it('should return NaN for negative index beyond bounds', async () => {
+        it('should throw PineRuntimeError for negative index beyond bounds', async () => {
             const pineTS = new PineTS(Provider.Mock, 'BTCUSDC', 'D', null, startDate, endDate);
             const code = `
-                const { array, na, plotchar } = context.pine;
+                const { array } = context.pine;
                 let a = array.from(10, 20, 30);
-                let oob = array.get(a, -4);
-                plotchar(na(oob) ? 1 : 0, 'isNa');
+                array.get(a, -4);
             `;
-            const { plots } = await pineTS.run(code);
-            expect(plots['isNa'].data[0].value).toBe(1);
+            await expect(pineTS.run(code)).rejects.toThrow(PineRuntimeError);
         });
 
-        it('should return NaN for negative index on empty array', async () => {
+        it('should throw PineRuntimeError for negative index on empty array', async () => {
             const pineTS = new PineTS(Provider.Mock, 'BTCUSDC', 'D', null, startDate, endDate);
             const code = `
-                const { array, na, plotchar } = context.pine;
+                const { array } = context.pine;
                 let a = array.new_float(0);
-                let val = array.get(a, -1);
-                plotchar(na(val) ? 1 : 0, 'isNa');
+                array.get(a, -1);
             `;
-            const { plots } = await pineTS.run(code);
-            expect(plots['isNa'].data[0].value).toBe(1);
+            await expect(pineTS.run(code)).rejects.toThrow(PineRuntimeError);
         });
 
         it('should work with method syntax (a.get(-1))', async () => {
@@ -94,19 +91,26 @@ describe('Array Negative Index (v6 semantics)', () => {
         it('should work with single-element array', async () => {
             const pineTS = new PineTS(Provider.Mock, 'BTCUSDC', 'D', null, startDate, endDate);
             const code = `
-                const { array, na, plotchar } = context.pine;
+                const { array, plotchar } = context.pine;
                 let a = array.from(42);
                 plotchar(array.get(a, -1), 'neg1');
-                let oob = array.get(a, -2);
-                plotchar(na(oob) ? 1 : 0, 'oobNa');
             `;
             const { plots } = await pineTS.run(code);
             expect(plots['neg1'].data[0].value).toBe(42);
-            expect(plots['oobNa'].data[0].value).toBe(1);
+        });
+
+        it('should throw PineRuntimeError for OOB on single-element array', async () => {
+            const pineTS = new PineTS(Provider.Mock, 'BTCUSDC', 'D', null, startDate, endDate);
+            const code = `
+                const { array } = context.pine;
+                let a = array.from(42);
+                array.get(a, -2);
+            `;
+            await expect(pineTS.run(code)).rejects.toThrow(PineRuntimeError);
         });
     });
 
-    // ── array.set ──────────────────────────────────────
+    // -- array.set --
 
     describe('array.set', () => {
         it('should set last element with index -1', async () => {
@@ -133,26 +137,18 @@ describe('Array Negative Index (v6 semantics)', () => {
             expect(plots['val'].data[0].value).toBe(77);
         });
 
-        it('should not modify array for out-of-bounds negative index', async () => {
+        it('should throw PineRuntimeError for out-of-bounds negative index', async () => {
             const pineTS = new PineTS(Provider.Mock, 'BTCUSDC', 'D', null, startDate, endDate);
             const code = `
-                const { array, plotchar } = context.pine;
+                const { array } = context.pine;
                 let a = array.from(1, 2, 3);
                 array.set(a, -4, 99);
-                plotchar(array.get(a, 0), 'v0');
-                plotchar(array.get(a, 1), 'v1');
-                plotchar(array.get(a, 2), 'v2');
-                plotchar(array.size(a), 'size');
             `;
-            const { plots } = await pineTS.run(code);
-            expect(plots['v0'].data[0].value).toBe(1);
-            expect(plots['v1'].data[0].value).toBe(2);
-            expect(plots['v2'].data[0].value).toBe(3);
-            expect(plots['size'].data[0].value).toBe(3);
+            await expect(pineTS.run(code)).rejects.toThrow(PineRuntimeError);
         });
     });
 
-    // ── array.remove ──────────────────────────────────────
+    // -- array.remove --
 
     describe('array.remove', () => {
         it('should remove last element with index -1', async () => {
@@ -187,22 +183,18 @@ describe('Array Negative Index (v6 semantics)', () => {
             expect(plots['first'].data[0].value).toBe(20);
         });
 
-        it('should return na for out-of-bounds negative index', async () => {
+        it('should throw PineRuntimeError for out-of-bounds negative index', async () => {
             const pineTS = new PineTS(Provider.Mock, 'BTCUSDC', 'D', null, startDate, endDate);
             const code = `
-                const { array, na, plotchar } = context.pine;
+                const { array } = context.pine;
                 let a = array.from(10, 20, 30);
-                let removed = array.remove(a, -4);
-                plotchar(na(removed) ? 1 : 0, 'isNa');
-                plotchar(array.size(a), 'size');
+                array.remove(a, -4);
             `;
-            const { plots } = await pineTS.run(code);
-            expect(plots['isNa'].data[0].value).toBe(1);
-            expect(plots['size'].data[0].value).toBe(3);
+            await expect(pineTS.run(code)).rejects.toThrow(PineRuntimeError);
         });
     });
 
-    // ── array.insert ──────────────────────────────────────
+    // -- array.insert --
 
     describe('array.insert', () => {
         it('should insert before last element with index -1', async () => {
@@ -240,7 +232,7 @@ describe('Array Negative Index (v6 semantics)', () => {
         });
     });
 
-    // ── mixed operations ──────────────────────────────────────
+    // -- mixed operations --
 
     describe('mixed operations', () => {
         it('should handle sequential negative-index operations', async () => {

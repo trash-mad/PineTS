@@ -5,5 +5,6 @@ import PineTS from './PineTS.class';
 import { Context } from './Context.class';
 import { Provider } from './marketData/Provider.class';
 import { Indicator } from './Indicator';
+import { PineRuntimeError } from './errors/PineRuntimeError';
 
-export { PineTS, Context, Provider, Indicator };
+export { PineTS, Context, Provider, Indicator, PineRuntimeError };

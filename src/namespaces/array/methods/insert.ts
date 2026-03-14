@@ -2,6 +2,7 @@
 
 import { PineArrayObject } from '../PineArrayObject';
 import { isValueOfType } from '../utils';
+import { PineRuntimeError } from '../../../errors/PineRuntimeError';
 
 export function insert(context: any) {
     return (id: PineArrayObject, index: number, value: any): void => {
@@ -14,6 +15,13 @@ export function insert(context: any) {
         }
         // Pine Script v6: negative indices count backwards from the end.
         if (index < 0) index = id.array.length + index;
+        // For insert, valid indices are 0 to array.length (inclusive — insert at end is valid).
+        if (index < 0 || index > id.array.length) {
+            throw new PineRuntimeError(
+                `Index ${index} is out of bounds, array size is ${id.array.length}.`,
+                'array.insert'
+            );
+        }
         id.array.splice(index, 0, value);
     };
 }
