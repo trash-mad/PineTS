@@ -177,3 +177,82 @@ describe('LINEFILL Namespace', () => {
         expect(linefills.length).toBeGreaterThanOrEqual(2);
     });
 });
+
+/**
+ * Regression test for GitHub issue #167:
+ * linefill.new() with named color arg receives {color: '#...'} object
+ * instead of the plain color string, because linefill.any() forwarded the
+ * transpiler's named-args object as-is to new().
+ */
+describe('linefill.new named-args regression (#167)', () => {
+    const sDate = new Date('2025-01-01').getTime();
+    const eDate = new Date('2025-11-20').getTime();
+
+    it('linefill.new with named color=color.blue via Pine Script stores a string color', async () => {
+        const pineTS = new PineTS(Provider.Mock, 'BTCUSDC', 'D', null, sDate, eDate);
+
+        const code = `
+//@version=5
+indicator("Linefill Named Color", overlay=true)
+
+var line l1 = na
+var line l2 = na
+var linefill lf = na
+
+if barstate.islast
+    l1 := line.new(bar_index - 10, high, bar_index, high, color=color.red)
+    l2 := line.new(bar_index - 10, low, bar_index, low, color=color.green)
+    lf := linefill.new(l1, l2, color=color.blue)
+        `;
+
+        const { plots } = await pineTS.run(code);
+
+        expect(plots['__linefills__']).toBeDefined();
+        const linefills = plots['__linefills__'].data[0]?.value;
+        expect(linefills).toBeDefined();
+        expect(linefills.length).toBeGreaterThan(0);
+
+        const lf = linefills[linefills.length - 1];
+        // Color must be a resolved string, NOT an object like {color: '#2196F3'}
+        expect(typeof lf.color).toBe('string');
+        expect(lf.color).not.toBe('[object Object]');
+    });
+
+    it('linefill.new with positional color still works', async () => {
+        const pineTS = new PineTS(Provider.Mock, 'BTCUSDC', 'D', null, sDate, eDate);
+
+        const { plots } = await pineTS.run((context) => {
+            var l1 = line.new(0, 50000, 10, 60000);
+            var l2 = line.new(0, 40000, 10, 50000);
+            linefill.new(l1, l2, '#ff5733');
+            return {};
+        });
+
+        const linefills = plots['__linefills__'].data[0].value;
+        expect(linefills[0].color).toBe('#ff5733');
+    });
+
+    it('linefill.new with color(na) via named arg does not produce object color', async () => {
+        const pineTS = new PineTS(Provider.Mock, 'BTCUSDC', 'D', null, sDate, eDate);
+
+        const code = `
+//@version=5
+indicator("Linefill Na Color", overlay=true)
+var line l1 = na
+var line l2 = na
+var linefill lf = na
+if barstate.islast
+    l1 := line.new(bar_index - 5, high, bar_index, high)
+    l2 := line.new(bar_index - 5, low, bar_index, low)
+    lf := linefill.new(l1, l2, color=color(na))
+        `;
+
+        const { plots } = await pineTS.run(code);
+        const linefills = plots['__linefills__']?.data[0]?.value;
+        if (linefills && linefills.length > 0) {
+            const lf = linefills[linefills.length - 1];
+            // Should be a falsy value (null, empty string, etc.), not an object
+            expect(typeof lf.color).not.toBe('object');
+        }
+    });
+});

@@ -53,13 +53,18 @@ export class LinefillHelper {
     }
 
     // linefill.new(line1, line2, color) → series linefill
+    // The transpiler may bundle named args into an object:
+    //   linefill.new(line1, line2, {color: '#2196F3'})
     new(line1: LineObject, line2: LineObject, color: any): LinefillObject {
         // Resolve thunks: in `var` UDT declarations, line.new() calls are hoisted
         // as thunks (functions). Resolve them here so LinefillObject stores actual
         // LineObjects, not unresolved functions.
         const resolvedLine1 = this._resolve(line1) as LineObject;
         const resolvedLine2 = this._resolve(line2) as LineObject;
-        const resolvedColor = this._resolve(color) || '';
+        // Extract color from named-args object if the transpiler bundled it
+        const rawColor = color && typeof color === 'object' && !Array.isArray(color) && 'color' in color
+            ? color.color : color;
+        const resolvedColor = this._resolve(rawColor) || '';
         const lf = new LinefillObject(resolvedLine1, resolvedLine2, resolvedColor);
         lf._createdAtBar = this.context.idx;
         this._linefills.push(lf);
