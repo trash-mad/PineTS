@@ -233,7 +233,7 @@ export class PineTS {
     public stream(
         pineTSCode: Indicator | Function | String,
         options: { pageSize?: number; live?: boolean; interval?: number } = {},
-    ): { on: (event: 'data' | 'error', callback: Function) => void; stop: () => void } {
+    ): { on: (event: 'data' | 'error' | 'warning', callback: Function) => void; stop: () => void } {
         const { live = true, interval = 1000 } = options;
         const pageSize = options.pageSize || this.data.length; // Default pageSize to full data if not provided
 
@@ -247,7 +247,7 @@ export class PineTS {
             code = pineTSCode;
         }
 
-        const listeners: { [key: string]: Function[] } = { data: [], error: [] };
+        const listeners: { [key: string]: Function[] } = { data: [], error: [], warning: [] };
         let stopped = false;
 
         const emit = (event: string, ...args: any[]) => {
@@ -256,7 +256,7 @@ export class PineTS {
             }
         };
 
-        const on = (event: 'data' | 'error', callback: Function) => {
+        const on = (event: 'data' | 'error' | 'warning', callback: Function) => {
             if (!listeners[event]) listeners[event] = [];
             listeners[event].push(callback);
         };
@@ -289,6 +289,13 @@ export class PineTS {
                     }
 
                     emit('data', ctx);
+
+                    // Emit any runtime warnings accumulated during this page
+                    if (ctx.warnings && ctx.warnings.length > 0) {
+                        for (const w of ctx.warnings) {
+                            emit('warning', w);
+                        }
+                    }
 
                     // If live streaming is enabled, wait for the interval before fetching next data
                     // This prevents hammering the API when new data is available immediately or in rapid succession
@@ -465,6 +472,9 @@ export class PineTS {
 
         // Copy plots metadata
         pageContext.plots = { ...fullContext.plots };
+
+        // Copy runtime warnings
+        pageContext.warnings = fullContext.warnings;
 
         return pageContext;
     }

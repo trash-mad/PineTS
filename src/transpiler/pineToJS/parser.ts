@@ -41,6 +41,10 @@ export class Parser {
     private tokens: Token[];
     private pos: number;
     private functionNames: Set<string> = new Set();
+    // When true, peekOperatorEx does NOT cross NEWLINE boundaries at all.
+    // Used inside single-line switch case bodies to prevent binary operator
+    // continuation from absorbing the next case's negative test value.
+    private noLineContinuation: boolean = false;
     constructor(tokens: Token[]) {
         this.tokens = tokens;
         this.pos = 0;
@@ -82,6 +86,11 @@ export class Parser {
         let offset = 0;
         let token = this.peek(offset);
 
+        // In single-line switch case bodies, do NOT cross newlines
+        if (token.type === TokenType.NEWLINE && this.noLineContinuation) {
+            return false;
+        }
+
         // Skip NEWLINE and subsequent INDENT
         if (token.type === TokenType.NEWLINE) {
             offset++;
@@ -116,6 +125,9 @@ export class Parser {
 
         // Skip NEWLINE and subsequent INDENT
         if (token.type === TokenType.NEWLINE) {
+            // In single-line switch case bodies, do NOT cross newlines at all
+            if (this.noLineContinuation) return null;
+
             offset++;
             token = this.peek(offset);
 
@@ -1802,8 +1814,14 @@ export class Parser {
                 }
                 this.advance(); // DEDENT
             } else {
-                // Single expression
-                consequentStmts.push(new ExpressionStatement(this.parseExpression()));
+                // Single line: may be an expression or a statement (e.g., col := value)
+                // Disable line continuation to prevent the expression parser from
+                // absorbing the next case's negative test value (e.g., -1 =>) as
+                // binary subtraction from the current case's body.
+                this.noLineContinuation = true;
+                const stmt = this.parseStatement();
+                this.noLineContinuation = false;
+                if (stmt) consequentStmts.push(stmt);
             }
 
             // Extract the value expression from statements (for backwards compatibility)

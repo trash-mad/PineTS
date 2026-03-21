@@ -3,7 +3,6 @@
 import { PineArrayObject } from '../PineArrayObject';
 import { isValueOfType } from '../utils';
 import { Context } from '../../../Context.class';
-import { PineRuntimeError } from '../../../errors/PineRuntimeError';
 
 export function set(context: Context) {
     return (id: PineArrayObject, index: number, value: any) => {
@@ -17,10 +16,11 @@ export function set(context: Context) {
         // Pine Script v6: negative indices count backwards from the end.
         if (index < 0) index = id.array.length + index;
         if (index < 0 || index >= id.array.length) {
-            throw new PineRuntimeError(
+            context.warn(
                 `Index ${index} is out of bounds, array size is ${id.array.length}.`,
                 'array.set'
             );
+            return;
         }
         id.array[index] = typeof value === 'number' ? context.precision(value) : value;
     };

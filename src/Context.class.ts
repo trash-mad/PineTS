@@ -52,6 +52,14 @@ export class Context {
     public __maxLoops: number = 500000;
     public NA: any = NaN;
 
+    /** Runtime warnings (OOB access, etc.) — non-blocking, script continues. */
+    public warnings: { message: string; method?: string; bar: number }[] = [];
+
+    /** Emit a runtime warning. The script continues execution (returns na/no-op). */
+    public warn(message: string, method?: string): void {
+        this.warnings.push({ message, method, bar: this.idx });
+    }
+
     public lang: any;
     public length: number = 0;
 

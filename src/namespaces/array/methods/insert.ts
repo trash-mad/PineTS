@@ -2,7 +2,6 @@
 
 import { PineArrayObject } from '../PineArrayObject';
 import { isValueOfType } from '../utils';
-import { PineRuntimeError } from '../../../errors/PineRuntimeError';
 
 export function insert(context: any) {
     return (id: PineArrayObject, index: number, value: any): void => {
@@ -17,10 +16,11 @@ export function insert(context: any) {
         if (index < 0) index = id.array.length + index;
         // For insert, valid indices are 0 to array.length (inclusive — insert at end is valid).
         if (index < 0 || index > id.array.length) {
-            throw new PineRuntimeError(
+            context.warn(
                 `Index ${index} is out of bounds, array size is ${id.array.length}.`,
                 'array.insert'
             );
+            return;
         }
         id.array.splice(index, 0, value);
     };
