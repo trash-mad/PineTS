@@ -1,5 +1,26 @@
 # Change Log
 
+## [0.9.7] - 2026-03-23 - Alerts, Fill & Drawing Fixes, OOB Warnings (TV-Aligned)
+
+### Added
+
+- **`alert()` / `alertcondition()`**: Full runtime support for `alert()` and `alertcondition()` — messages, frequencies, and event emission through the context. Transpiler injects **callsite IDs** on alert calls so multiple alerts with the same text or different frequencies are tracked independently (mirrors plot callsite IDs).
+- **`Context.warnings` & `context.warn()`**: Non-fatal runtime warnings (e.g. array/matrix index out of range) are collected per bar instead of throwing. **`runLive()`** subscribers can listen for `'warning'` events alongside `'data'` and `'error'`.
+- **Documentation**: New `docs/data-providers.md` (FMP, Alpaca, Binance, Mock, array-based data). Updates to precision docs, architecture overview, getting started, and initialization guides.
+
+### Fixed
+
+- **Array/Matrix Out-of-Bounds — TV Behavior**: Out-of-range `array.*` / `matrix.*` access no longer throws `PineRuntimeError` by default; it logs a warning via `context.warn()`, returns `na` / no-op, and keeps the script running (matches TradingView).
+- **`fill()` & `force_overlay`**: `fill(plot1, plot2, ...)` now respects `force_overlay` so fills follow overlay vs sub-pane placement correctly.
+- **Linefill Color Parsing**: Fixed incorrect parsing / application of linefill colors from Pine options. (fix issue #167)
+- **Tuple Destructuring**: Fixed edge cases in tuple destructuring (transpiler / parser) that broke certain assignment patterns.
+- **Drawing Object Default Overlay**: Label, line, linefill, box, and polyline helpers now default `overlay` from `context.indicator?.overlay` instead of hardcoded `true`, so drawings align with the hosting indicator’s pane.
+- **Named Options vs `null`**: Added `arg !== null` guard when detecting named option objects — `null` from `color(na)` and similar no longer gets misclassified as a named-args object.
+- **Numeric Precision & Equality Docs**: Tweaked `math.__eq` / `math.__neq` and serializer precision handling; documentation and examples updated for consistent decimal places.
+- **Sourcemap Drift**: Fixed browser dev bundle sourcemaps so stack traces map reliably to TypeScript sources.
+
+---
+
 ## [0.9.6] - 2026-03-14 - Runtime Error Handling, Loop Guard, Array Fixes & New Market Data Providers
 
 ### Added

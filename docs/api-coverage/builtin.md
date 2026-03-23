@@ -53,15 +53,15 @@ parent: API Coverage
 | `input()`          | ✅     | Input parameter       |
 | `na()`             | ✅     | Check if value is NaN |
 | `nz()`             | ✅     | Replace NaN with zero |
-| `alert()`          |        | Alert function        |
-| `alertcondition()` |        | Alert condition       |
+| `alert()`          | ✅     | Alert function        |
+| `alertcondition()` | ✅     | Alert condition       |
 | `bool()`           | ✅     | Boolean conversion    |
-| `box()`            |        | Box object            |
-| `color()`          |        | Color object          |
+| `box()`            | ✅     | Box object            |
+| `color()`          | ✅     | Color object          |
 | `dayofmonth()`     | ✅     | Day of month function |
 | `dayofweek()`      | ✅     | Day of week function  |
 | `fill()`           | ✅     | Fill function         |
-| `fixnan()`         |        | Fix NaN values        |
+| `fixnan()`         | ✅     | Fix NaN values        |
 | `float()`          | ✅     | Float conversion      |
 | `hline()`          | ✅     | Horizontal line       |
 | `hour()`           | ✅     | Hour function         |
@@ -69,14 +69,14 @@ parent: API Coverage
 | `label()`          | ✅     | Label object          |
 | `library()`        |        | Library declaration   |
 | `line()`           | ✅     | Line object           |
-| `linefill()`       |        | Linefill object       |
+| `linefill()`       | ✅     | Linefill object       |
 | `max_bars_back()`  |        | Maximum bars back     |
 | `minute()`         | ✅     | Minute function       |
 | `month()`          | ✅     | Month function        |
 | `second()`         | ✅     | Second function       |
 | `strategy()`       |        | Strategy declaration  |
 | `string()`         | ✅     | String conversion     |
-| `table()`          |        | Table object          |
+| `table()`          | ✅     | Table object          |
 | `time()`           | ✅     | Time function         |
 | `time_close()`     | ✅     | Time close function   |
 | `timestamp()`      | ✅     | Timestamp function    |
