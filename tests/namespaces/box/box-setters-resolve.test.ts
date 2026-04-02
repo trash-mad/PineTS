@@ -1,6 +1,93 @@
 import { describe, it, expect } from 'vitest';
 import { PineTS, Provider } from 'index';
 
+describe('Drawing object force_overlay split', () => {
+    it('box.new with force_overlay=true creates a separate __boxes_overlay__ plot', async () => {
+        const code = `
+//@version=5
+indicator("Force overlay box", overlay=false)
+// Non-overlay box (stays in indicator pane)
+var b1 = box.new(0, 100, 10, 50)
+// Overlay box (should go to main chart pane)
+var b2 = box.new(0, 60000, 10, 50000, force_overlay=true)
+plot(close, "price")
+`;
+        const pineTS = new PineTS(Provider.Mock, 'BTCUSDC', 'W', null, new Date('2018-12-10').getTime(), new Date('2019-06-01').getTime());
+        const { plots } = await pineTS.run(code);
+
+        // Regular boxes plot should exist with the non-overlay box
+        expect(plots['__boxes__']).toBeDefined();
+        const regularBoxes = plots['__boxes__'].data[0].value;
+        const activeRegular = regularBoxes.filter((b: any) => b && !b._deleted && !b.force_overlay);
+        expect(activeRegular.length).toBe(1);
+
+        // Overlay boxes plot should exist with the force_overlay box
+        expect(plots['__boxes_overlay__']).toBeDefined();
+        expect(plots['__boxes_overlay__'].options.overlay).toBe(true);
+        const overlayBoxes = plots['__boxes_overlay__'].data[0].value;
+        const activeOverlay = overlayBoxes.filter((b: any) => b && !b._deleted);
+        expect(activeOverlay.length).toBe(1);
+        expect(activeOverlay[0].force_overlay).toBe(true);
+    });
+
+    it('line.new with force_overlay=true creates a separate __lines_overlay__ plot', async () => {
+        const code = `
+//@version=5
+indicator("Force overlay line", overlay=false)
+var ln1 = line.new(0, 100, 10, 50)
+var ln2 = line.new(0, 60000, 10, 50000, force_overlay=true)
+plot(close, "price")
+`;
+        const pineTS = new PineTS(Provider.Mock, 'BTCUSDC', 'W', null, new Date('2018-12-10').getTime(), new Date('2019-06-01').getTime());
+        const { plots } = await pineTS.run(code);
+
+        expect(plots['__lines__']).toBeDefined();
+        expect(plots['__lines_overlay__']).toBeDefined();
+        expect(plots['__lines_overlay__'].options.overlay).toBe(true);
+
+        const overlayLines = plots['__lines_overlay__'].data[0].value;
+        const activeOverlay = overlayLines.filter((l: any) => l && !l._deleted);
+        expect(activeOverlay.length).toBe(1);
+        expect(activeOverlay[0].force_overlay).toBe(true);
+    });
+
+    it('label.new with force_overlay=true creates a separate __labels_overlay__ plot', async () => {
+        const code = `
+//@version=5
+indicator("Force overlay label", overlay=false)
+if barstate.islast
+    label.new(bar_index, 100, "Indicator label")
+    label.new(bar_index, close, "Overlay label", force_overlay=true)
+plot(close, "price")
+`;
+        const pineTS = new PineTS(Provider.Mock, 'BTCUSDC', 'W', null, new Date('2018-12-10').getTime(), new Date('2019-06-01').getTime());
+        const { plots } = await pineTS.run(code);
+
+        expect(plots['__labels__']).toBeDefined();
+        expect(plots['__labels_overlay__']).toBeDefined();
+        expect(plots['__labels_overlay__'].options.overlay).toBe(true);
+
+        const overlayLabels = plots['__labels_overlay__'].data[0].value;
+        const activeOverlay = overlayLabels.filter((l: any) => l && !l._deleted);
+        expect(activeOverlay.length).toBe(1);
+        expect(activeOverlay[0].force_overlay).toBe(true);
+    });
+
+    it('no overlay plot created when no force_overlay objects exist', async () => {
+        const code = `
+//@version=5
+indicator("No force overlay", overlay=false)
+var b = box.new(0, 100, 10, 50)
+plot(close, "price")
+`;
+        const pineTS = new PineTS(Provider.Mock, 'BTCUSDC', 'W', null, new Date('2018-12-10').getTime(), new Date('2019-06-01').getTime());
+        const { plots } = await pineTS.run(code);
+
+        expect(plots['__boxes__']).toBeDefined();
+        expect(plots['__boxes_overlay__']).toBeUndefined();
+    });
+});
+
 describe('Box/Line setters resolve Series values', () => {
 
     it('box.set_lefttop with time-based expressions produces valid plot data', async () => {
