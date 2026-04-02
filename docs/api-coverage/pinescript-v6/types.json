@@ -21,9 +21,9 @@
         "adjustment.splits": true
     },
     "alert": {
-        "alert.freq_all": false,
-        "alert.freq_once_per_bar": false,
-        "alert.freq_once_per_bar_close": false
+        "alert.freq_all": true,
+        "alert.freq_once_per_bar": true,
+        "alert.freq_once_per_bar_close": true
     },
     "backadjustment": {
         "backadjustment.inherit": true,

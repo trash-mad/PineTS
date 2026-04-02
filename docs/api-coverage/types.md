@@ -290,9 +290,9 @@ parent: API Coverage
 
 | Function                        | Status | Description                        |
 | ------------------------------- | ------ | ---------------------------------- |
-| `alert.freq_all`                |        | Alert frequency all                |
-| `alert.freq_once_per_bar`       |        | Alert frequency once per bar       |
-| `alert.freq_once_per_bar_close` |        | Alert frequency once per bar close |
+| `alert.freq_all`                | ✅     | Alert frequency all                |
+| `alert.freq_once_per_bar`       | ✅     | Alert frequency once per bar       |
+| `alert.freq_once_per_bar_close` | ✅     | Alert frequency once per bar close |
 
 ### Backadjustment
 
