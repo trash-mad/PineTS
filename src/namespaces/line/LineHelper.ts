@@ -161,32 +161,32 @@ export class LineHelper {
     // --- Setter methods ---
 
     set_x1(id: LineObject, x: number): void {
-        if (id && !id._deleted) id.x1 = x;
+        if (id && !id._deleted) id.x1 = this._resolve(x);
     }
 
     set_y1(id: LineObject, y: number): void {
-        if (id && !id._deleted) id.y1 = y;
+        if (id && !id._deleted) id.y1 = this._resolve(y);
     }
 
     set_x2(id: LineObject, x: number): void {
-        if (id && !id._deleted) id.x2 = x;
+        if (id && !id._deleted) id.x2 = this._resolve(x);
     }
 
     set_y2(id: LineObject, y: number): void {
-        if (id && !id._deleted) id.y2 = y;
+        if (id && !id._deleted) id.y2 = this._resolve(y);
     }
 
     set_xy1(id: LineObject, x: number, y: number): void {
         if (id && !id._deleted) {
-            id.x1 = x;
-            id.y1 = y;
+            id.x1 = this._resolve(x);
+            id.y1 = this._resolve(y);
         }
     }
 
     set_xy2(id: LineObject, x: number, y: number): void {
         if (id && !id._deleted) {
-            id.x2 = x;
-            id.y2 = y;
+            id.x2 = this._resolve(x);
+            id.y2 = this._resolve(y);
         }
     }
 
