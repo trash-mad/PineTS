@@ -1,5 +1,19 @@
 # Change Log
 
+## [0.9.9] - 2026-04-02 - Drawing Setters, NAMESPACES_LIKE Subscripts & force_overlay Sync
+
+### Fixed
+
+- **NAMESPACES_LIKE subscripts (transpiler)**: Subscripts on dual-use builtins (`time[1]`, `time_close[1]`, etc.) now emit **`$.get(name.__value, n)`** instead of **`name.__value[n]`**, so lookback matches Pine Script / forward-array Series semantics.
+- **Box / line coordinate setters**: `set_lefttop`, `set_rightbottom`, `set_xy1`, `set_xy2`, `set_left`, `set_right`, and related setters on **box** and **line** helpers now call **`_resolve()`** so Series-derived coordinates unwrap the same way as **`new()`** constructors.
+- **`force_overlay` on drawing objects**: **`syncToPlot()`** in **BoxHelper**, **LineHelper**, and **LabelHelper** routes **`force_overlay=true`** objects into **separate overlay plots** so chart integrations can place them on the main price pane.
+
+### Added
+
+- **Tests**: `box-setters-resolve`, namespace subscript transpiler coverage, and **gradient `fill()`** cases.
+
+---
+
 ## [0.9.8] - 2026-03-27 - TA Cross/CrossUnder, Matrix·Vector, Plot Serialization & Input Fixes
 
 ### Fixed
