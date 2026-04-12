@@ -1,5 +1,20 @@
 # Change Log
 
+## [0.9.11] - 2026-04-12 - `time()` HTF Semantics, `timeframe.change()` & Live-Stream `var` Snapshots
+
+### Added
+
+- **`time()` with a `timeframe` argument**: **`TimeHelper`** now aligns the active bar to the **higher timeframe** and returns the **opening timestamp** of the HTF bar that contains the current bar (intraday, daily, weekly, monthly). Empty or chart-matching timeframe still returns the bar’s own time. **`timeframe_bars_back`** handling was removed in favor of this alignment model (see TradingView-style HTF `time()`).
+- **Session + HTF `time()`**: When **`session`** is set, the session test uses the **aligned HTF time**, not only the chart bar time.
+- **`timeframe.change(timeframe)`**: Implemented on **`Timeframe`** — compares **previous vs current** bar open times aligned to the target TF and returns **`true`** on the **first bar of a new HTF period** (uses shared **`normalizeTimeframe`** / **`alignToTimeframe`** from **`Time.ts`**).
+- **Tests**: **`time-function.test.ts`**, **`timeframe-change.test.ts`**.
+
+### Fixed
+
+- **Live stream (`runLive`) and `var` state**: Re-execution of the **last bar** no longer relies only on **`_removeLastResult`** for **`var`** persistence. The runtime **snapshots `var` / `let` / `const` / `params`** before the last bar, then **restores** that snapshot before refetch and re-run, so **`var`** entries stay consistent when the feed updates (avoids in-place drift across streaming ticks).
+
+---
+
 ## [0.9.10] - 2026-04-07 - Drawing Caps, Linefill Dedupe & Live-Stream Throttle
 
 ### Added
